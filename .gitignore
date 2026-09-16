@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+
+# Environment — JANGAN commit .env yang berisi credentials
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Next.js
+.next/
+out/
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript
+*.tsbuildinfo
+
+# Tests
+coverage/
+
+# Database (dev SQLite)
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prompt / internal notes — jangan di-commit
+*.md
+!README.md
+
+# Admin scripts (key generation, sensitive tooling)
+scripts/
+
+# Zip archives
+*.zip

@@ -1,0 +1,428 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Dev: SQLite  |  Prod (Vercel): PostgreSQL
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── WALLET-FIRST DESIGN ──────────────────────────────────────────────────────
+// No "users" table for normal customers.
+// Wallet address IS the customer identity.
+// Orders belong to a wallet_address + network combination.
+
+// ─── ASSETS & NETWORKS ───────────────────────────────────────────────────────
+
+model Network {
+  id          String   @id @default(uuid())
+  networkId   String   @unique  // SOLANA | BASE | BSC
+  name        String
+  displayName String
+  chainId     String?
+  explorerUrl String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  assets   Asset[]
+  wallets  PlatformWallet[]
+}
+
+model Asset {
+  id        String   @id @default(uuid())
+  symbol    String   @unique  // SOL | ETH | BNB
+  name      String
+  decimals  Int
+  isActive  Boolean  @default(true)
+  networkId String
+  createdAt DateTime @default(now())
+
+  network     Network      @relation(fields: [networkId], references: [id])
+  topUpOrders TopUpOrder[]
+  sellOrders  SellOrder[]
+  quotes      Quote[]
+}
+
+// ─── PLATFORM WALLETS (Kiswap hot wallets) ───────────────────────────────────
+
+model PlatformWallet {
+  id        String   @id @default(uuid())
+  networkId String
+  address   String
+  label     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  network           Network            @relation(fields: [networkId], references: [id])
+  cryptoDeposits    CryptoDeposit[]
+  cryptoWithdrawals CryptoWithdrawal[]
+
+  @@index([networkId])
+}
+
+// ─── QUOTES ───────────────────────────────────────────────────────────────────
+
+model Quote {
+  id           String    @id @default(uuid())
+  type         String    // TOP_UP | SELL
+  assetId      String
+  assetSymbol  String
+  network      String
+  idrAmount    Decimal
+  cryptoAmount Decimal
+  marketPrice  Decimal
+  spread       Decimal
+  serviceFee   Decimal
+  networkFee   Decimal
+  tax          Decimal  @default(0)
+  taxRate      Decimal  @default(0)
+  totalIdr     Decimal
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime  @default(now())
+
+  asset       Asset        @relation(fields: [assetId], references: [id])
+  topUpOrders TopUpOrder[]
+  sellOrders  SellOrder[]
+
+  @@index([expiresAt])
+  // Atomic quote consumption filters type + expiry (P9/P22).
+  @@index([type, expiresAt])
+}
+
+// ─── TOP UP ORDERS ────────────────────────────────────────────────────────────
+
+model TopUpOrder {
+  id                 String    @id @default(uuid())
+  publicId           String    @unique  // opaque public token e.g. "kst_abc123xyz"
+  orderNumber        String    @unique  // human-readable e.g. "KSW-ABC123"
+  // Wallet identity (no user account needed)
+  walletAddress      String
+  walletType         String    // EVM | SOLANA
+  assetId            String
+  assetSymbol        String
+  network            String
+  quoteId            String
+  idrAmount          Decimal
+  cryptoAmount       Decimal
+  serviceFee         Decimal
+  networkFee         Decimal
+  tax                Decimal  @default(0)
+  totalIdr           Decimal
+  destinationAddress String    // = walletAddress (from connected wallet)
+  status             String    @default("CREATED")
+  failureReason      String?
+  cryptoTxHash       String?
+  completedAt        DateTime?
+  expiresAt          DateTime
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  asset         Asset             @relation(fields: [assetId], references: [id])
+  quote         Quote             @relation(fields: [quoteId], references: [id])
+  payment       Payment?
+  withdrawal    CryptoWithdrawal?
+  ledgerEntries LedgerEntry[]
+
+  @@index([walletAddress])
+  @@index([status])
+  // Admin list: WHERE status + ORDER BY createdAt (P22). Unique fields already indexed.
+  @@index([status, createdAt])
+  @@index([cryptoTxHash])
+}
+
+// ─── SELL ORDERS ──────────────────────────────────────────────────────────────
+
+model SellOrder {
+  id                    String    @id @default(uuid())
+  publicId              String    @unique  // opaque public token
+  orderNumber           String    @unique
+  // Wallet identity
+  walletAddress         String
+  walletType            String    // EVM | SOLANA
+  assetId               String
+  assetSymbol           String
+  network               String
+  quoteId               String
+  cryptoAmount          Decimal
+  idrAmount             Decimal
+  serviceFee            Decimal
+  networkFee            Decimal
+  tax                   Decimal  @default(0)
+  totalIdrPayout        Decimal
+  depositAddress        String    // Kiswap platform deposit address
+  // Payout — stored per-transaction, no saved bank profile
+  payoutBankName        String?
+  payoutAccountNumber   String?
+  payoutAccountName     String?
+  status                String    @default("CREATED")
+  failureReason         String?
+  cryptoTxHash          String?
+  confirmations         Int       @default(0)
+  requiredConfirmations Int       @default(1)
+  completedAt           DateTime?
+  expiresAt             DateTime
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  asset         Asset          @relation(fields: [assetId], references: [id])
+  quote         Quote          @relation(fields: [quoteId], references: [id])
+  payout        Payout?
+  deposit       CryptoDeposit?
+  ledgerEntries LedgerEntry[]
+
+  @@index([walletAddress])
+  @@index([status])
+  // Admin list + cron scanner: WHERE status + ORDER BY createdAt (P22).
+  @@index([status, createdAt])
+  // txHash uniqueness check across sell orders (P10).
+  @@index([cryptoTxHash])
+}
+
+// ─── PAYMENTS (KiPay) ─────────────────────────────────────────────────────────
+
+model Payment {
+  id                    String    @id @default(uuid())
+  topUpOrderId          String    @unique
+  // KiPay fields
+  kipayTrxId            String?   @unique  // e.g. "SBX-20260825-VG57V5"
+  kipayMode             String?   // sandbox | production
+  requestedAmount       Decimal
+  uniqueCode            Int?
+  grossAmount           Decimal
+  feeAmount             Decimal?
+  netAmount             Decimal?
+  currency              String    @default("IDR")
+  status                String    @default("PENDING")  // PENDING | PAID | EXPIRED | FAILED
+  provider              String?   // shopeepay | dana | etc
+  qrPayload             String?   // raw QRIS string
+  lastVerifiedAt        DateTime? // throttle verifikasi upstream (§13/§28)
+  note                  String?
+  paidAt                DateTime?
+  expiresAt             DateTime
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  topUpOrder TopUpOrder     @relation(fields: [topUpOrderId], references: [id])
+  webhooks   KipayWebhook[]
+
+  @@index([kipayTrxId])
+  @@index([status])
+}
+
+model KipayWebhook {
+  id          String    @id @default(uuid())
+  paymentId   String?
+  kipayTrxId  String
+  eventType   String    // transaction.paid | transaction.expired
+  payload     String    // raw JSON
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@unique([kipayTrxId, eventType])
+  @@index([kipayTrxId])
+}
+
+// ─── CRYPTO ───────────────────────────────────────────────────────────────────
+
+model CryptoDeposit {
+  id              String    @id @default(uuid())
+  sellOrderId     String    @unique
+  platformWalletId String
+  txHash          String?
+  network         String
+  asset           String
+  amount          Decimal
+  senderAddress   String?
+  confirmations   Int       @default(0)
+  isConfirmed     Boolean   @default(false)
+  detectedAt      DateTime?
+  confirmedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sellOrder      SellOrder      @relation(fields: [sellOrderId], references: [id])
+  platformWallet PlatformWallet @relation(fields: [platformWalletId], references: [id])
+
+  @@index([txHash])
+  @@index([network])
+}
+
+model CryptoWithdrawal {
+  id               String    @id @default(uuid())
+  topUpOrderId     String    @unique
+  platformWalletId String
+  txHash           String?
+  network          String
+  asset            String
+  amount           Decimal
+  destination      String
+  status           String    @default("PENDING")
+  sentAt           DateTime?
+  confirmedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  topUpOrder     TopUpOrder     @relation(fields: [topUpOrderId], references: [id])
+  platformWallet PlatformWallet @relation(fields: [platformWalletId], references: [id])
+
+  @@index([txHash])
+}
+
+// ─── PAYOUTS ──────────────────────────────────────────────────────────────────
+
+model Payout {
+  id            String    @id @default(uuid())
+  sellOrderId   String    @unique
+  bankName      String
+  accountNumber String
+  accountName   String
+  amount        Decimal
+  status        String    @default("PENDING")
+  providerRef   String?
+  failureReason String?
+  sentAt        DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sellOrder SellOrder @relation(fields: [sellOrderId], references: [id])
+
+  @@index([status])
+}
+
+// ─── LEDGER ───────────────────────────────────────────────────────────────────
+
+model LedgerEntry {
+  id              String   @id @default(uuid())
+  walletAddress   String
+  asset           String   // IDR | SOL | ETH | BNB
+  direction       String   // CREDIT | DEBIT
+  amount          Decimal
+  reference       String
+  topUpOrderId    String?
+  sellOrderId     String?
+  description     String?
+  createdAt       DateTime @default(now())
+
+  topUpOrder TopUpOrder? @relation(fields: [topUpOrderId], references: [id])
+  sellOrder  SellOrder?  @relation(fields: [sellOrderId], references: [id])
+
+  @@index([walletAddress])
+  @@index([topUpOrderId])
+  @@index([sellOrderId])
+}
+
+// ─── AUDIT & SYSTEM ───────────────────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  entity    String?
+  entityId  String?
+  actor     String?  // walletAddress | admin email | "system"
+  metadata  String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([actor])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model FeeConfig {
+  id             String   @id @default(uuid())
+  assetSymbol    String
+  type           String   // TOP_UP | SELL
+  serviceFeeRate Decimal
+  networkFeeRate Decimal  @default(0) // % dari bruto, cth 0.001 = 0.1%
+  taxRate        Decimal  @default(0) // % dari bruto, cth 0.001 = 0.1%
+  minOrderIdr    Decimal
+  maxOrderIdr    Decimal
+  // SOL ATA fee dalam satuan SOL (bukan IDR!) — dipotong langsung dari crypto output
+  // saat Top Up SOL. Contoh: 0.002 = potong 0.002 SOL dari SOL yang diterima user.
+  // Ini menutupi biaya pembuatan ATA jika wallet penerima belum punya ATA.
+  // Default 0 = tidak dipotong. Nama kolom DB tetap solAtaFeeIdr (backward compat).
+  solAtaFeeIdr   Decimal  @default(0)
+  isActive       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([assetSymbol, type])
+}
+
+// ─── ACTIVE DEFENSE (security events + IP bans, aggregated/deduped) ──────────
+// One row per (hour bucket, ip, eventType) with counters — repeated identical
+// events bump counters, never create unbounded rows (see SECURITY_EVENT_RETENTION).
+
+model SecurityEvent {
+  id          String   @id @default(uuid())
+  bucket      DateTime // hour bucket (UTC) for aggregation/dedup
+  ip          String
+  subnet      String?  // /24 (IPv4) — never treat IP as perfect identity
+  fingerprint String?  // hash(ip + UA) — correlates botnets across rotating IPs
+  eventType   String   // ADMIN_LOGIN_FAIL | WEBHOOK_INVALID_SIG | RATE_LIMITED | FLOOD | ...
+  severity    String   @default("LOW") // LOW | MEDIUM | HIGH | CRITICAL
+  endpoint    String?
+  userAgent   String?
+  country     String?  // approximate only (from trusted proxy headers), never exact
+  count       Int      @default(1)
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @updatedAt
+  actionTaken String?  // NONE | RATE_LIMITED | QUARANTINED | BLOCKED
+
+  @@unique([bucket, ip, eventType])
+  @@index([ip])
+  @@index([severity, lastSeen])
+  @@index([eventType, lastSeen])
+}
+
+model IpBan {
+  id        String    @id @default(uuid())
+  ip        String    @unique
+  // Public restriction ID (safe to show; random, reveals nothing internal).
+  publicId  String    @unique @default(uuid())
+  reason    String
+  // Progressive temp-ban state: BAN #N lasts N hours, capped at max auto.
+  level     Int       @default(1) // escalation display level
+  violationCount Int  @default(1) // imposed ban cycles (server-computed)
+  requestCount   Int  @default(0) // blocked hits during bans (display only)
+  durationMs     Int  @default(3600000) // imposed duration, server-computed
+  expiresAt DateTime? // null + permanent=true = explicit MANUAL permanent only
+  permanent Boolean   @default(false) // only ever set manually by admin
+  needsReview Boolean @default(false) // set when cycles exceed the auto cap
+  eventRef  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([expiresAt])
+}
+
+// ─── ADMIN ACCESS KEY (SEPARATE FROM CUSTOMER FLOW) ────────────────────────
+// Single credential system — no email, no password, no role hierarchy.
+// Admin Access Key = 64-char hex, stored only as SHA-256 verifier.
+// Login dengan key → session token (cookie) → full dashboard access.
+
+model AdminAccessKey {
+  id                 String   @id @default(uuid())
+  keyVerifier        String   @unique  // SHA-256 of the access key (stored, not plaintext)
+  isActive           Boolean  @default(true)
+  keyVersion         Int      @default(1)  // untuk key rotation
+  // Single-device enforcement: only the newest session (jti) is valid.
+  // New login overwrites this and kicks the previous device.
+  activeSessionJti   String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  lastLoginAt        DateTime?  // tracking, bukan keamanan
+
+  @@index([keyVerifier])
+  @@index([isActive])
+}

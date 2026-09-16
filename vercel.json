@@ -1,0 +1,36 @@
+{
+  "buildCommand": "npx prisma generate && next build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "regions": ["sin1"],
+  "crons": [
+    {
+      "path": "/api/cron/scan-deposits",
+      "schedule": "*/1 * * * *"
+    },
+    {
+      "path": "/api/cron/reconcile",
+      "schedule": "*/2 * * * *"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "@kipramp_database_url",
+    "JWT_SECRET": "@kipramp_jwt_secret",
+    "PAYMENT_PROVIDER": "mock",
+    "BLOCKCHAIN_PROVIDER": "real",
+    "SOLANA_RPC_URL": "@kipramp_solana_rpc",
+    "BASE_RPC_URL": "@kipramp_base_rpc",
+    "BSC_RPC_URL": "@kipramp_bsc_rpc",
+    "SOLANA_PLATFORM_PRIVATE_KEY": "@kipramp_solana_key",
+    "BASE_PLATFORM_PRIVATE_KEY": "@kipramp_base_key",
+    "BSC_PLATFORM_PRIVATE_KEY": "@kipramp_bsc_key",
+    "ADMIN_EMAIL": "@kipramp_admin_email",
+    "ADMIN_PASSWORD": "@kipramp_admin_password",
+    "MOCK_WEBHOOK_SECRET": "@kipramp_webhook_secret",
+    "QUOTE_TTL_SECONDS": "120",
+
+    "KIPAY_API_BASE_URL": "@kipramp_kipay_api_base_url",
+    "KIPAY_API_KEY": "@kipramp_kipay_api_key",
+    "KIPAY_MODE": "@kipramp_kipay_mode"
+  }
+}
