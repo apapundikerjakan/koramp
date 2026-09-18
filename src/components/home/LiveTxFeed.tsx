@@ -84,9 +84,3 @@ export function LiveTxFeed() {
     </div>
   );
 }
-
-/** Asset icons orbit — RETIRED with the generic hero. Kept as no-op export
- * so older imports don't break; renders nothing. */
-export function OrbitIcons() {
-  return null;
-}

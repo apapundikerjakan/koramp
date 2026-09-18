@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { ok } from '@/lib/response';
 import { rateLimit } from '@/lib/rateLimit';
+import { readJsonBounded } from '@/lib/apiGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
       return ok({});
     }
 
-    const body = schema.parse(await req.json().catch(() => ({})));
+    const body = schema.parse(await readJsonBounded(req).catch(() => ({})));
     const path = normalizePath(body.path);
     if (!path) return ok({});
 

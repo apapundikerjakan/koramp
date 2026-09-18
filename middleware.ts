@@ -21,8 +21,9 @@ function maxBodyBytes(): number {
 
 // Public pages counted by the visit beacon (mirrors /api/visits allowlist).
 function visitPath(path: string): string | null {
-  if (path === '/' || path === '/topup' || path === '/sell') return path;
-  if (path.startsWith('/order/') && /^\/order\/[A-Za-z0-9_-]{1,100}$/.test(path)) return path;
+  const p = path.length > 1 ? path.replace(/\/+$/, '') : path;
+  if (p === '/' || p === '/topup' || p === '/sell') return p;
+  if (p.startsWith('/order/') && /^\/order\/[A-Za-z0-9_-]{1,100}$/.test(p)) return p;
   return null;
 }
 

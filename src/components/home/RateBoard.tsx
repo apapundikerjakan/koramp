@@ -10,19 +10,13 @@ import Link from 'next/link';
 import { RefreshCw } from 'lucide-react';
 import { TokenIcon, type TokenSymbol } from '@/components/ui/TokenIcon';
 import { ShimmerText } from '@/components/ui/motion';
+import { formatIDR } from '@/lib/format';
 
 const ROWS: { symbol: TokenSymbol; name: string; network: string }[] = [
   { symbol: 'SOL', name: 'Solana', network: 'Solana' },
   { symbol: 'ETH', name: 'Ethereum', network: 'Base' },
   { symbol: 'BNB', name: 'BNB', network: 'BSC' },
 ];
-
-function fmtIdr(v: string): string {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency', currency: 'IDR',
-    minimumFractionDigits: 0, maximumFractionDigits: 0,
-  }).format(Number(v));
-}
 
 export function RateBoard() {
   const [prices, setPrices] = useState<Record<string, string | null> | null>(null);
@@ -71,7 +65,7 @@ export function RateBoard() {
               </div>
             </div>
             <p className="tnum text-ink-primary font-semibold text-base sm:text-lg whitespace-nowrap" aria-live="off">
-              {prices?.[r.symbol] ? fmtIdr(prices[r.symbol] as string) : <span className="text-ink-muted">—</span>}
+              {prices?.[r.symbol] ? formatIDR(prices[r.symbol] as string) : <span className="text-ink-muted">—</span>}
             </p>
           </div>
         ))}

@@ -90,6 +90,13 @@ export function AnalyticsCharts() {
   }, [range, load]);
 
   const empty = days !== null && days.every((d) => d.revenue === 0 && d.expenses === 0 && d.topupVolume === 0 && d.sellVolume === 0 && d.visits === 0);
+  const totals = days === null ? null : {
+    revenue: days.reduce((s, d) => s + d.revenue, 0),
+    expenses: days.reduce((s, d) => s + d.expenses, 0),
+    topup: days.reduce((s, d) => s + d.topupVolume, 0),
+    sell: days.reduce((s, d) => s + d.sellVolume, 0),
+    visits: days.reduce((s, d) => s + d.visits, 0),
+  };
 
   return (
     <section aria-label="Analitik">
@@ -119,6 +126,16 @@ export function AnalyticsCharts() {
         <>
           {empty && (
             <p className="text-ink-muted text-xs mb-3">Belum ada order COMPLETED atau kunjungan pada rentang ini — grafik akan terisi otomatis.</p>
+          )}
+          {/* Text alternative for charts (screen readers) */}
+          {totals && !empty && (
+            <ul className="sr-only">
+              <li>Total pendapatan {range}: {fullIdr(totals.revenue)}</li>
+              <li>Total pengeluaran {range}: {fullIdr(totals.expenses)}</li>
+              <li>Volume penjualan {range}: {fullIdr(totals.topup)}</li>
+              <li>Volume pembelian {range}: {fullIdr(totals.sell)}</li>
+              <li>Total kunjungan {range}: {totals.visits}</li>
+            </ul>
           )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ChartCard title="Pendapatan vs pengeluaran" hint="serviceFee COMPLETED vs networkFee + fee KiPay, per hari (IDR)">

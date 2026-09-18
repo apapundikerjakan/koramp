@@ -12,14 +12,8 @@ import clsx from 'clsx';
 const ASSET_COLOR: Record<string, string> = {
   SOL: 'text-purple-400', ETH: 'text-blue-400', BNB: 'text-yellow-400',
 };
-const EXPLORER: Record<string, string> = {
-  // Testnet explorer URLs — TX hash appended directly after the base path.
-  SOLANA: 'https://solscan.io/tx/',         // + ?cluster=devnet added below
-  BASE: 'https://sepolia.basescan.org/tx/',
-  BSC: 'https://testnet.bscscan.com/tx/',
-};
-
 function buildExplorerUrl(network: string, txHash: string): string {
+  // Canonical explorer URLs live in lib/assets (single source of truth).
   return getTxExplorerUrl(network as 'SOLANA' | 'BASE' | 'BSC', txHash);
 }
 
