@@ -156,7 +156,7 @@ export default function AdminPage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {[
                 { label: 'Total Top Ups',   value: stats.totalTopUps ?? 0,     icon: ArrowUpRight,   color: 'text-blue-400',   bg: 'bg-blue-500/10'   },
-                { label: 'Total Sells',     value: stats.totalSells ?? 0,      icon: ArrowDownRight, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+                { label: 'Total Sells',     value: stats.totalSells ?? 0,      icon: ArrowDownRight, color: 'text-brand-400',   bg: 'bg-brand-500/10'   },
                 { label: 'Pending Top Ups', value: stats.pendingTopUps ?? 0,   icon: Clock,          color: 'text-yellow-400', bg: 'bg-yellow-500/10' },
                 { label: 'Pending Sells',   value: stats.pendingSells ?? 0,    icon: Clock,          color: 'text-orange-400', bg: 'bg-orange-500/10' },
                 { label: 'Done Top Ups',    value: stats.completedTopUps ?? 0, icon: CheckCircle2,   color: 'text-green-400',  bg: 'bg-green-500/10'  },

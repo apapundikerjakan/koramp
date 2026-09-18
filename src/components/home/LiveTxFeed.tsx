@@ -1,19 +1,19 @@
 'use client';
 
 /**
- * Live Transaction Feed — prompt UI §4.10.
- * Stream kartu transaksi bergulir di hero (data contoh hardcoded sesuai spec).
- * Interval 3.5s, 4 kartu visible, spring enter dari bawah, fade exit.
+ * LiveTxFeed — "buku kas" loket: hairline ledger rows, tabular numerals.
+ * Data contoh hardcoded sesuai spek (bukan transaksi sungguhan).
+ * Interval 3.5s, 4 baris visible, spring enter dari bawah, fade exit.
  */
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import clsx from 'clsx';
-import { formatIDR } from '@/lib/format';
+import { formatIDR, formatCrypto } from '@/lib/format';
+import { TokenIcon, type TokenSymbol } from '@/components/ui/TokenIcon';
 
 interface MockTx {
   type: 'topup' | 'sell';
-  asset: 'SOL' | 'ETH' | 'BNB';
+  asset: TokenSymbol;
   address: string;
   idr: number;
   amount: number;
@@ -30,12 +30,6 @@ const MOCK_TRANSACTIONS: MockTx[] = [
   { type: 'sell', asset: 'ETH', address: '0xB92e...4Dc1', idr: 80_200, amount: 0.002, network: 'Base', status: 'done', ago: '12 menit lalu' },
 ];
 
-const ASSET_STYLE: Record<MockTx['asset'], { icon: string; color: string }> = {
-  SOL: { icon: '◎', color: 'text-purple-400' },
-  ETH: { icon: 'Ξ', color: 'text-blue-400' },
-  BNB: { icon: '⬡', color: 'text-yellow-400' },
-};
-
 const VISIBLE = 4;
 const INTERVAL_MS = 3500;
 
@@ -49,77 +43,50 @@ export function LiveTxFeed() {
     return () => clearInterval(id);
   }, [reduce]);
 
-  const cards: (MockTx & { key: number })[] = Array.from({ length: VISIBLE }, (_, i) => {
+  const rows: (MockTx & { key: number })[] = Array.from({ length: VISIBLE }, (_, i) => {
     const idx = (offset + i) % MOCK_TRANSACTIONS.length;
     return { ...MOCK_TRANSACTIONS[idx], key: offset + i };
   });
 
   return (
-    <div className="relative" aria-label="Transaksi terbaru (contoh)">
-      <div className="space-y-3">
-        <AnimatePresence initial={false} mode="popLayout">
-          {cards.map((t) => (
-            <motion.div
-              key={t.key}
-              layout={!reduce}
-              initial={reduce ? false : { y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={reduce ? undefined : { opacity: 0, transition: { duration: 0.2 } }}
-              transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-              className="bg-surface-1/90 backdrop-blur border border-line-subtle rounded-2xl p-4 text-left shadow-xl shadow-black/20"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-white text-sm font-semibold">
-                  <span className={clsx('mr-1.5', ASSET_STYLE[t.asset].color)}>{ASSET_STYLE[t.asset].icon}</span>
-                  {t.type === 'topup' ? 'Top Up' : 'Sell'} {t.asset}
-                </span>
-                {t.status === 'done' ? (
-                  <span className="badge-success">✓ Selesai</span>
-                ) : (
-                  <span className="badge-warning">⟳ Proses</span>
-                )}
+    <div className="border border-line rounded-2xl bg-surface-1 overflow-hidden" aria-label="Arus loket terkini (contoh)">
+      <AnimatePresence initial={false} mode="popLayout">
+        {rows.map((t) => (
+          <motion.div
+            key={t.key}
+            layout={!reduce}
+            initial={reduce ? false : { y: '60%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={reduce ? undefined : { opacity: 0, transition: { duration: 0.2 } }}
+            transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+            className="rate-row !py-2.5"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span
+                className={t.status === 'done' ? 'w-1.5 h-1.5 rounded-full bg-[#4CAF6D] flex-shrink-0' : 'w-1.5 h-1.5 rounded-full bg-[#D9A441] animate-pulse flex-shrink-0'}
+                aria-hidden
+              />
+              <TokenIcon symbol={t.asset} size={18} />
+              <div className="min-w-0">
+                <p className="text-ink-primary text-sm font-medium leading-tight truncate">
+                  {t.type === 'topup' ? 'Top up' : 'Jual'} {t.asset}
+                  <span className="text-ink-muted font-mono text-xs ml-2">{t.address}</span>
+                </p>
+                <p className="text-ink-muted text-xs">{t.network} · {t.ago}</p>
               </div>
-              <p className="text-gray-500 font-mono text-xs">{t.address}</p>
-              <p className="text-gray-300 text-sm mt-1">
-                {formatIDR(t.idr)} <span className="text-gray-600">→</span>{' '}
-                <span className={ASSET_STYLE[t.asset].color}>≈ {t.amount} {t.asset}</span>
-              </p>
-              <p className="text-gray-600 text-xs mt-1">{t.network} Network · {t.ago}</p>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
-      <div className="pointer-events-none absolute inset-x-0 -bottom-2 h-10 bg-gradient-to-t from-base to-transparent" aria-hidden />
+            </div>
+            <p className="tnum text-ink-primary text-sm whitespace-nowrap">
+              {formatIDR(t.idr)} <span className="text-ink-muted">→</span> {formatCrypto(t.amount)} {t.asset}
+            </p>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }
 
-/** Asset icons orbit (Animata) — floating SOL/ETH/BNB with glow halos. */
+/** Asset icons orbit — RETIRED with the generic hero. Kept as no-op export
+ * so older imports don't break; renders nothing. */
 export function OrbitIcons() {
-  const reduce = useReducedMotion();
-  const items = [
-    { icon: '◎', color: 'text-purple-400', border: 'border-purple-500/30', glow: 'bg-purple-500/20', pos: 'left-[8%] top-[12%]', d: '0s' },
-    { icon: 'Ξ', color: 'text-blue-400', border: 'border-blue-500/30', glow: 'bg-blue-500/20', pos: 'right-[10%] top-[20%]', d: '1.2s' },
-    { icon: '⬡', color: 'text-yellow-400', border: 'border-yellow-500/30', glow: 'bg-yellow-500/20', pos: 'left-[14%] bottom-[14%]', d: '2.1s' },
-  ];
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
-      {items.map((it) => (
-        <div key={it.icon} className={clsx('absolute', it.pos)}>
-          <div className={clsx('absolute inset-0 blur-2xl rounded-full scale-150', it.glow)} />
-          <div
-            className={clsx(
-              'relative w-14 h-14 rounded-2xl glass border flex items-center justify-center text-2xl font-black',
-              it.border,
-              it.color,
-              !reduce && 'animate-float-y',
-            )}
-            style={reduce ? undefined : { animationDelay: it.d }}
-          >
-            {it.icon}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return null;
 }
