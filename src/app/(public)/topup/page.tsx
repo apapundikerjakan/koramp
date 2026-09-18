@@ -28,7 +28,7 @@ function fmtCrypto(n: string | number): string {
 
 export default function TopUpPage() {
   const router = useRouter();
-  const { address, evmAddress, evmChainId, solAddress, isConnected, setShowConnectModal, isCorrectNetworkForAsset, ensureChainForAsset } = useWallet();
+  const { address, evmAddress, evmChainId, solAddress, isConnected, setShowConnectModal, openEvmModal, isCorrectNetworkForAsset, ensureChainForAsset } = useWallet();
 
   const [step, setStep] = useState<Step>('asset');
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -183,7 +183,11 @@ export default function TopUpPage() {
     if (!quote || !asset) return;
     if (!resolvedAddress) {
       toast.error('Wallet tidak terhubung. Hubungkan kembali sebelum melanjutkan.');
-      setShowConnectModal(true);
+      if (asset && ASSET_INFO[asset].walletType === 'SOLANA') {
+        setShowConnectModal(true);
+      } else {
+        openEvmModal();
+      }
       return;
     }
     setSubmitting(true);
@@ -315,7 +319,7 @@ export default function TopUpPage() {
                 <div>
                   <p className="text-yellow-400 text-sm font-semibold">Wallet belum terhubung</p>
                   <p className="text-gray-400 text-xs mt-1">Hubungkan {info?.walletType === 'EVM' ? 'EVM wallet (MetaMask/Rabby)' : 'Solana wallet (Phantom/Solflare)'} untuk melanjutkan.</p>
-                  <button onClick={() => setShowConnectModal(true)} className="mt-2 text-brand-400 text-xs underline">Hubungkan wallet →</button>
+                  <button onClick={() => info?.walletType === 'SOLANA' ? setShowConnectModal(true) : openEvmModal()} className="mt-2 text-brand-400 text-xs underline">Hubungkan wallet →</button>
                 </div>
               </div>
             )}

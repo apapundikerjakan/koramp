@@ -72,7 +72,7 @@ function PaymentQrCode({ uri }: { uri: string }) {
 export default function SellPage() {
   const router = useRouter();
   const {
-    evmAddress, evmChainId, solAddress, address, isConnected, setShowConnectModal,
+    evmAddress, evmChainId, solAddress, address, isConnected, setShowConnectModal, openEvmModal,
     isCorrectNetworkForAsset, ensureChainForAsset, sendCrypto, walletName,
   } = useWallet();
 
@@ -285,7 +285,11 @@ export default function SellPage() {
     if (!quote || !asset) return;
     if (!resolvedAddress) {
       toast.error('Wallet tidak terhubung. Hubungkan kembali sebelum melanjutkan.');
-      setShowConnectModal(true);
+      if (asset && ASSET_INFO[asset].walletType === 'SOLANA') {
+        setShowConnectModal(true);
+      } else {
+        openEvmModal();
+      }
       return;
     }
     const finalBank = showCustomBank ? bankNameCustom : bankName;
@@ -479,7 +483,7 @@ export default function SellPage() {
             {asset && !isConnected && (
               <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
                 <p className="text-yellow-400 text-sm font-semibold">Wallet belum terhubung</p>
-                <button onClick={() => setShowConnectModal(true)} className="mt-1 text-brand-400 text-xs underline">Hubungkan wallet →</button>
+                <button onClick={() => info?.walletType === 'SOLANA' ? setShowConnectModal(true) : openEvmModal()} className="mt-1 text-brand-400 text-xs underline">Hubungkan wallet →</button>
               </div>
             )}
             {asset && isConnected && !walletOk && (

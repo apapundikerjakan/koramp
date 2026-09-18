@@ -21,6 +21,7 @@ import {
   useAccount, useConnect, useDisconnect, useSwitchChain,
   useChainId, useSendTransaction, type Connector,
 } from 'wagmi';
+import { useConnectModal } from '@rainbow-me/rainbowkit';
 import { parseEther } from 'viem';
 import { useWallet as useSolanaWallet, useConnection as useSolanaConnection } from '@solana/wallet-adapter-react';
 import { PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
@@ -62,6 +63,9 @@ export interface KiprampWalletState {
   walletType: 'EVM' | 'SOLANA' | null;
 
   // ── UI ──────────────────────────────────────────────────────────────────────
+  /** Open RainbowKit's native EVM connect modal (MetaMask/Rabby/WC/Coinbase). */
+  openEvmModal: () => void;
+  /** Show/hide the Solana-only wallet modal (Phantom/Solflare/Backpack). */
   showConnectModal: boolean;
   setShowConnectModal: (v: boolean) => void;
   error: string | null;
@@ -108,6 +112,12 @@ export function useWallet(): KiprampWalletState {
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // RainbowKit's native EVM connect modal — opens popup with MetaMask/Rabby/WC/Coinbase
+  const { openConnectModal } = useConnectModal();
+  const openEvmModal = useCallback(() => {
+    openConnectModal?.();
+  }, [openConnectModal]);
 
   // Solana connection from ConnectionProvider (correct RPC, no 403)
   const { connection: solanaConnection } = useSolanaConnection();
@@ -418,6 +428,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     evmConnected, evmAddress, evmChainId, evmWalletName, evmWrongNetwork,
     solConnected, solAddress, solWalletName,
     address, ecosystem, network, chainId: evmChainId, walletName, walletType,
+    openEvmModal,
     showConnectModal, setShowConnectModal,
     error, setError,
     connectEvm, disconnectEvm, disconnectSol, disconnect, switchToChain, ensureChainForAsset, sendCrypto,
@@ -427,6 +438,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     evmConnected, evmAddress, evmChainId, evmWalletName, evmWrongNetwork,
     solConnected, solAddress, solWalletName,
     address, ecosystem, network, walletName, walletType,
+    openEvmModal,
     showConnectModal, error,
     connectEvm, disconnectEvm, disconnectSol, disconnect, switchToChain, ensureChainForAsset, sendCrypto,
     isCorrectNetworkForAsset, getRequiredNetworkName, getRequiredChainId, shortAddress,

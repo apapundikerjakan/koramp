@@ -49,9 +49,9 @@ import { clusterApiUrl } from '@solana/web3.js';
 import { WalletProvider as KiprampWalletProvider } from '@/contexts/WalletContext';
 import { Toaster } from 'sonner';
 
-// Lazy unified modal — not eagerly loaded until opened.
-const UnifiedWalletModal = dynamic(
-  () => import('@/components/wallet/UnifiedWalletModal').then((m) => ({ default: m.UnifiedWalletModal })),
+// Lazy Solana-only modal — not eagerly loaded until opened.
+const SolanaWalletModal = dynamic(
+  () => import('@/components/wallet/SolanaWalletModal').then((m) => ({ default: m.SolanaWalletModal })),
   { ssr: false },
 );
 
@@ -212,7 +212,7 @@ export function WalletProviders({ children }: { children: React.ReactNode }) {
               {/* Kipramp unified wallet context reads from wagmi + wallet-adapter */}
               <KiprampWalletProvider>
                 {children}
-                <UnifiedWalletModal />
+                <SolanaWalletModal />
                 <Toaster
                   position="top-right"
                   theme="dark"
