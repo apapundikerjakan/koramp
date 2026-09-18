@@ -17,7 +17,7 @@ import clsx from 'clsx';
 
 // Lazy-load ConnectButton — RainbowKit uses browser APIs not available on SSR.
 const ConnectButton = dynamic(
-  () => import('@rainbow-me/rainbowkit').then((m) => m.ConnectButton),
+  () => import('@rainbow-me/rainbowkit').then((m) => ({ default: m.ConnectButton })),
   {
     ssr: false,
     loading: () => (
