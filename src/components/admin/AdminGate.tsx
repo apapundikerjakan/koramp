@@ -67,8 +67,8 @@ export function RestrictedNotice({ remaining, retryAfter, restrictionId }: {
   }, [left]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a] flex items-center justify-center px-4">
-      <div className="w-full max-w-md text-center bg-[#111128] border border-[#1e1e45] rounded-xl p-8">
+    <div className="min-h-screen bg-base flex items-center justify-center px-4">
+      <div className="w-full max-w-md text-center bg-surface-2 border border-line rounded-xl p-8">
         <p className="text-brand-400 text-xs font-bold tracking-widest mb-2">KIPRAMP SECURITY</p>
         <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-6 h-6 text-red-400" />

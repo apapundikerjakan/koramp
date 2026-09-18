@@ -157,10 +157,10 @@ export function UnifiedWalletModal() {
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowConnectModal(false)} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-[#0c0c22] border border-[#1e1e48] rounded-2xl shadow-2xl animate-fade-in overflow-hidden">
+      <div className="relative w-full max-w-md bg-surface-2 border border-line rounded-2xl shadow-2xl animate-fade-in overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#1e1e48]">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-brand-600/20 rounded-xl flex items-center justify-center">
               <Wallet className="w-5 h-5 text-brand-400" />
@@ -262,7 +262,7 @@ export function UnifiedWalletModal() {
                     key={w.id}
                     onClick={() => handleEvmConnect(w)}
                     disabled={isConnecting}
-                    className="w-full flex items-center gap-3 p-3.5 bg-[#0f0f2a] hover:bg-[#14143a] border border-[#1e1e48] hover:border-brand-600/40 rounded-xl transition-all text-left group disabled:opacity-60"
+                    className="w-full flex items-center gap-3 p-3.5 bg-surface-2 hover:bg-surface-3 border border-line hover:border-brand-600/40 rounded-xl transition-all text-left group disabled:opacity-60"
                   >
                     <span className="text-2xl w-8 text-center">{w.icon}</span>
                     <div className="flex-1 min-w-0">
@@ -300,9 +300,9 @@ export function UnifiedWalletModal() {
 
           {/* Divider */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-[#1e1e48]" />
+            <div className="flex-1 h-px bg-line" />
             <span className="text-gray-600 text-xs">atau hubungkan juga</span>
-            <div className="flex-1 h-px bg-[#1e1e48]" />
+            <div className="flex-1 h-px bg-line" />
           </div>
 
           {/* ── Solana Section ───────────────────────────────────────────────── */}
@@ -346,7 +346,7 @@ export function UnifiedWalletModal() {
                     key={w.name}
                     onClick={() => handleSolanaConnect(w.name)}
                     disabled={isConnecting}
-                    className="w-full flex items-center gap-3 p-3.5 bg-[#0f0f2a] hover:bg-[#14143a] border border-[#1e1e48] hover:border-purple-600/40 rounded-xl transition-all text-left group disabled:opacity-60"
+                    className="w-full flex items-center gap-3 p-3.5 bg-surface-2 hover:bg-surface-3 border border-line hover:border-line-strong rounded-xl transition-all text-left group disabled:opacity-60"
                   >
                     {w.icon ? (
                       <img src={w.icon} alt={w.name} width={32} height={32} className="w-8 h-8 rounded-lg" />

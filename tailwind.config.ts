@@ -1,5 +1,13 @@
 import type { Config } from 'tailwindcss';
 
+/**
+ * Kiswap tokens — "digital money-changer counter" (bottle green + brass + ivory).
+ *
+ * NOTE on `brand-*` classes: the ramp below is brass, not indigo. The class
+ * prefix is kept as a stable alias so ~60 existing usages keep working while
+ * the hue system is totally replaced (indigo #4f46e5 → brass #C7A048).
+ * New code should prefer `accent` / `pine` / `ink` names.
+ */
 const config: Config = {
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
@@ -11,42 +19,54 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          50: '#f0f4ff',
-          100: '#e0eaff',
-          200: '#c7d7fe',
-          300: '#a5bafc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+          50: '#FBF7ED',
+          100: '#F4EAD0',
+          200: '#E8D5A4',
+          300: '#D9B75F',
+          400: '#CFA94E',
+          500: '#C7A048',
+          600: '#A8863A',
+          700: '#866A2E',
+          800: '#6D5729',
+          900: '#5B4824',
+          950: '#332913',
         },
-        // ── Kiswap closed color system (prompt UI §3) ──
-        base: '#07071a',
+        accent: {
+          DEFAULT: '#C7A048',
+          hover: '#D9B75F',
+          deep: '#1F5C43',
+        },
+        pine: {
+          DEFAULT: '#1F5C43',
+          bright: '#2A7A58',
+          dim: '#153E2D',
+        },
+        // ── Kiswap closed color system ──
+        base: '#0E120F',
         surface: {
-          1: '#0b0b1f',
-          2: '#111128',
-          3: '#16163a',
+          1: '#131916',
+          2: '#182019',
+          3: '#1F2A21',
         },
         line: {
-          subtle: '#1a1a3e',
-          DEFAULT: '#1e1e45',
-          strong: '#2d2d6b',
+          subtle: '#243026',
+          DEFAULT: '#2C3A2E',
+          strong: '#3D5240',
         },
         ink: {
-          primary: '#ffffff',
-          secondary: '#9ca3af',
-          muted: '#4b5563',
+          primary: '#F5F1E8',
+          secondary: '#9FAB9F',
+          muted: '#5E6B60',
           disabled: '#374151',
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Geist', 'system-ui', 'sans-serif'],
+        sans: ['"Public Sans"', 'system-ui', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
+        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },
       boxShadow: {
-        'brand-glow': '0 0 20px rgba(99, 102, 241, 0.15)',
+        'brand-glow': '0 0 20px rgba(199, 160, 72, 0.18)',
         'sol-glow': '0 8px 32px rgba(168, 85, 247, 0.20)',
         'eth-glow': '0 8px 32px rgba(59, 130, 246, 0.20)',
         'bnb-glow': '0 8px 32px rgba(234, 179, 8, 0.20)',

@@ -129,9 +129,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a]">
+    <div className="min-h-screen bg-base">
       {/* Nav */}
-      <nav className="bg-[#0a0a1a] border-b border-[#1e1e45]">
+      <nav className="bg-base border-b border-line">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <span className="text-white font-bold">KIPRAMP ADMIN</span>
           <button onClick={handleLogout}
@@ -162,7 +162,7 @@ export default function AdminPage() {
                 { label: 'Done Top Ups',    value: stats.completedTopUps ?? 0, icon: CheckCircle2,   color: 'text-green-400',  bg: 'bg-green-500/10'  },
                 { label: 'Done Sells',      value: stats.completedSells ?? 0,  icon: CheckCircle2,   color: 'text-green-400',  bg: 'bg-green-500/10'  },
               ].map(s => (
-                <div key={s.label} className="bg-[#111128] border border-[#1e1e45] rounded-xl p-4">
+                <div key={s.label} className="bg-surface-2 border border-line rounded-xl p-4">
                   <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mb-3`}>
                     <s.icon className={`w-4 h-4 ${s.color}`} />
                   </div>
@@ -193,7 +193,7 @@ export default function AdminPage() {
 
           {/* Total IDR banner */}
           {walletData && (
-            <div className="bg-[#0b0b1f] border border-brand-600/20 rounded-xl px-5 py-4 mb-4 flex items-center justify-between">
+            <div className="bg-surface-1 border border-brand-600/20 rounded-xl px-5 py-4 mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-4 h-4 text-brand-400" />
                 <span className="text-gray-400 text-sm">Total Nilai Aset</span>
@@ -206,8 +206,8 @@ export default function AdminPage() {
             {walletData?.wallets.map(w => {
               const meta = ASSET_META[w.asset] ?? { icon: '●', color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' };
               return (
-                <div key={w.asset} className={`bg-[#111128] border rounded-xl p-5 ${
-                  w.status === 'ok' ? 'border-[#1e1e45]' :
+                <div key={w.asset} className={`bg-surface-2 border rounded-xl p-5 ${
+                  w.status === 'ok' ? 'border-line' :
                   w.status === 'unconfigured' ? 'border-yellow-500/20' : 'border-red-500/20'
                 }`}>
                   {/* Header */}
@@ -243,7 +243,7 @@ export default function AdminPage() {
                         1 {w.asset} = {fmt(w.pricePerUnit)}
                       </p>
                       {/* Address */}
-                      <div className="mt-3 pt-3 border-t border-[#1e1e45]">
+                      <div className="mt-3 pt-3 border-t border-line">
                         <p className="text-gray-600 text-xs mb-1">Alamat wallet</p>
                         <p className="text-gray-400 font-mono text-xs break-all">
                           {w.address.slice(0, 12)}...{w.address.slice(-8)}
@@ -262,10 +262,10 @@ export default function AdminPage() {
 
             {/* Loading skeleton */}
             {walletLoading && !walletData && [0, 1, 2].map(i => (
-              <div key={i} className="bg-[#111128] border border-[#1e1e45] rounded-xl p-5 animate-pulse">
-                <div className="h-9 w-9 rounded-xl bg-[#1e1e45] mb-4" />
-                <div className="h-6 w-24 bg-[#1e1e45] rounded mb-2" />
-                <div className="h-4 w-20 bg-[#1e1e45] rounded" />
+              <div key={i} className="bg-surface-2 border border-line rounded-xl p-5 animate-pulse">
+                <div className="h-9 w-9 rounded-xl bg-line mb-4" />
+                <div className="h-6 w-24 bg-line rounded mb-2" />
+                <div className="h-4 w-20 bg-line rounded" />
               </div>
             ))}
           </div>
@@ -287,7 +287,7 @@ export default function AdminPage() {
               { href: '/admin/settings#access-key', label: 'Access Key', desc: 'Lihat & generate key', icon: Key           },
             ].map(item => (
               <Link key={item.href} href={item.href}
-                className="bg-[#111128] border border-[#1e1e45] rounded-xl p-5 hover:border-[#2a2a5c] transition-all group">
+                className="bg-surface-2 border border-line rounded-xl p-5 hover:border-line-strong transition-all group">
                 <item.icon className="w-5 h-5 text-gray-500 group-hover:text-brand-400 transition-colors mb-3" />
                 <h3 className="text-white font-semibold text-sm">{item.label}</h3>
                 <p className="text-gray-500 text-xs mt-1">{item.desc}</p>

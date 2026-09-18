@@ -190,8 +190,8 @@ export function WalletProviders({ children }: { children: React.ReactNode }) {
     // useAccount/useWallet would throw outside their providers
     // (WagmiProviderNotFoundError → 500 on every public page).
     return (
-      <div className="min-h-screen bg-[#07071a] flex items-center justify-center px-4">
-        <div className="w-full max-w-md text-center bg-[#111128] border border-red-500/30 rounded-xl p-8">
+      <div className="min-h-screen bg-base flex items-center justify-center px-4">
+        <div className="w-full max-w-md text-center bg-surface-2 border border-red-500/30 rounded-xl p-8">
           <p className="text-red-400 text-xs font-bold tracking-widest mb-2">CONFIGURATION ERROR</p>
           <h1 className="text-white font-bold text-lg mb-2">Wallet Unavailable</h1>
           <p className="text-gray-400 text-sm leading-relaxed">
@@ -217,7 +217,7 @@ export function WalletProviders({ children }: { children: React.ReactNode }) {
                   position="top-right"
                   theme="dark"
                   toastOptions={{
-                    style: { background: '#0f0f23', border: '1px solid #1e1e45', color: '#fff' },
+                    style: { background: '#182019', border: '1px solid #2C3A2E', color: '#fff' },
                   }}
                 />
               </KiprampWalletProvider>

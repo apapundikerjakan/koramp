@@ -27,7 +27,7 @@ const FEATURES = [
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#07071a]">
+    <div className="min-h-screen bg-base">
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────── */}
@@ -121,7 +121,7 @@ export default function HomePage() {
           <Stagger className="grid grid-cols-1 sm:grid-cols-3 gap-5" gap={0.1}>
             {FEATURES.map(f => (
               <StaggerItem key={f.title}>
-                <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-6 h-full asset-lift hover:border-[#2d2d6b]">
+                <div className="bg-surface-1 border border-line-subtle rounded-2xl p-6 h-full asset-lift hover:border-line-strong">
                   <div className={clsx('w-11 h-11 rounded-xl flex items-center justify-center mb-4', f.bg)}>
                     <f.icon className={clsx('w-5 h-5', f.color)} aria-hidden />
                   </div>
@@ -145,7 +145,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Top Up */}
             <Reveal>
-              <div className="bg-[#0b0b1f] border border-brand-600/25 rounded-2xl p-7 bg-gradient-to-br from-brand-600/5 to-transparent h-full">
+              <div className="bg-surface-1 border border-brand-600/25 rounded-2xl p-7 bg-gradient-to-br from-brand-600/5 to-transparent h-full">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-brand-600/20 rounded-xl flex items-center justify-center">
                     <ArrowUpRight className="w-5 h-5 text-brand-400" aria-hidden />
@@ -173,7 +173,7 @@ export default function HomePage() {
 
             {/* Sell */}
             <Reveal delay={0.1}>
-              <div className="bg-[#0b0b1f] border border-green-600/25 rounded-2xl p-7 bg-gradient-to-br from-green-600/5 to-transparent h-full">
+              <div className="bg-surface-1 border border-green-600/25 rounded-2xl p-7 bg-gradient-to-br from-green-600/5 to-transparent h-full">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-green-600/20 rounded-xl flex items-center justify-center">
                     <ArrowDownLeft className="w-5 h-5 text-green-400" aria-hidden />
@@ -205,7 +205,7 @@ export default function HomePage() {
       {/* ── FLOW DIAGRAM ─────────────────────────────────────────── */}
       <section className="py-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-3xl mx-auto">
-          <Reveal className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-8 text-center">
+          <Reveal className="bg-surface-1 border border-line-subtle rounded-2xl p-8 text-center">
             <h2 className="text-2xl font-black text-white mb-2">Alur Pembayaran</h2>
             <p className="text-gray-500 text-sm mb-8">KiPay QRIS untuk pembayaran IDR yang cepat dan aman</p>
 

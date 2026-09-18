@@ -257,7 +257,7 @@ export default function TopUpPage() {
   const stepIdx = STEPS.indexOf(step);
 
   return (
-    <div className="min-h-screen bg-[#07071a]">
+    <div className="min-h-screen bg-base">
       <Navbar />
       <div className="max-w-lg mx-auto px-4 py-10">
         {/* Header */}
@@ -299,7 +299,7 @@ export default function TopUpPage() {
                       glow,
                       asset === a
                         ? 'selected border-brand-500 bg-brand-600/10 glass shadow-brand-glow'
-                        : `border-[#1a1a3e] hover:bg-[#0f0f28]`
+                        : `border-line-subtle hover:bg-surface-2`
                     )}>
                     <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center text-2xl font-black', ai.bg, ai.border, ai.color)}>
                       {ai.icon}
@@ -364,7 +364,7 @@ export default function TopUpPage() {
           <div className="space-y-5 animate-fade-in">
             <button onClick={() => setStep('asset')} className="text-gray-500 hover:text-white text-sm flex items-center gap-1">← Kembali</button>
 
-            <div className="flex items-center gap-3 p-4 bg-[#0b0b1f] rounded-xl border border-[#1a1a3e]">
+            <div className="flex items-center gap-3 p-4 bg-surface-1 rounded-xl border border-line-subtle">
               <span className={clsx('text-2xl font-black', info?.color)}>{info?.icon}</span>
               <div>
                 <p className={clsx('font-bold', info?.color)}>{asset} — {info?.network}</p>
@@ -391,7 +391,7 @@ export default function TopUpPage() {
               {['100000', '250000', '500000', '1000000'].map(v => (
                 <button key={v} onClick={() => setIdrInput(v)}
                   className={clsx('py-2 px-2 rounded-lg text-xs font-semibold border transition-all',
-                    idrInput === v ? 'bg-brand-600/20 border-brand-500 text-brand-400' : 'bg-[#0b0b1f] border-[#1a1a3e] text-gray-400 hover:border-[#2a2a5c]'
+                    idrInput === v ? 'bg-brand-600/20 border-brand-500 text-brand-400' : 'bg-surface-1 border-line-subtle text-gray-400 hover:border-line-strong'
                   )}>
                   {fmt(v).replace('Rp', '').replace('.', '').trim().slice(0, 5)}rb
                 </button>
@@ -416,16 +416,16 @@ export default function TopUpPage() {
             <button onClick={() => setStep('amount')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
 
             {/* Main summary box */}
-            <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 space-y-3">
+            <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 space-y-3">
 
               {/* What user pays */}
-              <div className="flex justify-between items-center pb-3 border-b border-[#1a1a3e]">
+              <div className="flex justify-between items-center pb-3 border-b border-line-subtle">
                 <span className="text-gray-400 text-sm">Anda bayar</span>
                 <span className="text-white font-bold text-lg">{fmt(quote.idrAmount)}</span>
               </div>
 
               {/* Fee breakdown — kalkulator transparan (sama untuk semua transaksi) */}
-              <div className="pb-3 border-b border-[#1a1a3e]">
+              <div className="pb-3 border-b border-line-subtle">
                 <FeeBreakdown
                   gross={quote.idrAmount}
                   serviceFee={quote.serviceFee}
@@ -457,7 +457,7 @@ export default function TopUpPage() {
               </div>
 
               {/* What user receives */}
-              <div className="flex justify-between items-center pt-2 border-t border-[#1a1a3e]">
+              <div className="flex justify-between items-center pt-2 border-t border-line-subtle">
                 <span className="text-gray-400 text-sm font-semibold">Anda terima</span>
                 <AnimatedCounter
                   value={parseFloat(quote.cryptoAmount) || 0}
@@ -468,7 +468,7 @@ export default function TopUpPage() {
             </div>
 
             {/* Visual note */}
-            <div className="flex items-start gap-2 p-3 bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl">
+            <div className="flex items-start gap-2 p-3 bg-surface-1 border border-line-subtle rounded-xl">
               <span className="text-yellow-400 text-xs mt-0.5">ℹ</span>
               <p className="text-gray-500 text-xs">
                 Dari {fmt(quote.idrAmount)} yang Anda bayar, dipotong biaya layanan {fmt(quote.serviceFee)} + tax {fmt(quote.tax ?? 0)} + biaya jaringan {fmt(quote.networkFee)}.
@@ -487,7 +487,7 @@ export default function TopUpPage() {
             )}
 
             {/* Wallet destination */}
-            <div className="p-4 bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl">
+            <div className="p-4 bg-surface-1 border border-line-subtle rounded-xl">
               <p className="text-gray-500 text-xs mb-1">Crypto dikirim ke wallet Anda</p>
               <p className="text-white font-mono text-sm break-all">{resolvedAddress}</p>
             </div>
@@ -523,7 +523,7 @@ export default function TopUpPage() {
             </div>
 
             {/* Supported payment apps */}
-            <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-3">
+            <div className="bg-surface-1 border border-line-subtle rounded-xl p-3">
               <p className="text-gray-500 text-xs mb-2 text-center">Didukung oleh semua aplikasi QRIS</p>
               <div className="flex flex-wrap justify-center gap-x-3 gap-y-1">
                 {['GoPay', 'OVO', 'ShopeePay', 'DANA', 'LinkAja', 'iSaku', 'Jenius', 'BCA', 'BRI', 'BNI', 'Mandiri', 'Bank lain'].map(app => (
@@ -563,7 +563,7 @@ export default function TopUpPage() {
             </QrFrame>
 
             {/* Payment details */}
-            <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-4 space-y-2">
+            <div className="bg-surface-1 border border-line-subtle rounded-xl p-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Total bayar</span>
                 <span className="text-white font-bold text-base">{fmt(payment.grossAmount)}</span>
@@ -654,7 +654,7 @@ export default function TopUpPage() {
               )}
             </div>
             {order && (
-              <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-5 text-left space-y-3">
+              <div className="bg-surface-1 border border-line-subtle rounded-xl p-5 text-left space-y-3">
                 <div className="flex justify-between text-sm"><span className="text-gray-500">Order</span><span className="text-white font-mono text-xs">{order.orderNumber}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-gray-500">Asset</span><span className={info?.color}>{asset} — {info?.network}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-gray-500">Jumlah</span><AnimatedCounter value={parseFloat(order.cryptoAmount) || 0} format={(n) => `${fmtCrypto(n)} ${asset}`} className="text-white font-bold" /></div>

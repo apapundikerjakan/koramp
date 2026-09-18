@@ -242,7 +242,7 @@ export default function OrderStatusPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07071a]">
+      <div className="min-h-screen bg-base">
         <Navbar />
         <div className="max-w-xl mx-auto px-4 py-16 text-center">
           <RefreshCw className="w-8 h-8 text-brand-400 animate-spin mx-auto mb-3" />
@@ -254,7 +254,7 @@ export default function OrderStatusPage() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-[#07071a]">
+      <div className="min-h-screen bg-base">
         <Navbar />
         <div className="max-w-xl mx-auto px-4 py-16 text-center">
           <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-4" />
@@ -278,7 +278,7 @@ export default function OrderStatusPage() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#07071a]">
+    <div className="min-h-screen bg-base">
       <Navbar />
       <div className="max-w-xl mx-auto px-4 py-8">
         {/* Back */}
@@ -315,7 +315,7 @@ export default function OrderStatusPage() {
         </div>
 
         {/* Status timeline */}
-        <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 mb-5">
+        <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5">
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-4">Status Transaksi</p>
           {isFailed ? (
             <div className="flex items-start gap-3 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
@@ -338,7 +338,7 @@ export default function OrderStatusPage() {
         </div>
 
         {/* Order details */}
-        <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 mb-5 space-y-3">
+        <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5 space-y-3">
           <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">Detail Order</p>
 
           {[
@@ -360,7 +360,7 @@ export default function OrderStatusPage() {
             </div>
           ))}
 
-          <div className="border-t border-[#1a1a3e] pt-3">
+          <div className="border-t border-line-subtle pt-3">
             <p className="text-gray-500 text-xs mb-1">Wallet</p>
             <div className="flex items-center gap-2">
               <p className="text-gray-300 font-mono text-xs flex-1">{shortAddr(order.walletAddress, 10)}</p>
@@ -376,7 +376,7 @@ export default function OrderStatusPage() {
 
         {/* TOPUP: Payment info */}
         {isTopUp && order.payment && (
-          <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 mb-5">
+          <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Pembayaran KiPay</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
@@ -407,10 +407,10 @@ export default function OrderStatusPage() {
 
         {/* SELL: Deposit address */}
         {!isTopUp && order.status === 'AWAITING_CRYPTO' && (
-          <div className="bg-[#0b0b1f] border border-yellow-500/20 rounded-2xl p-5 mb-5">
+          <div className="bg-surface-1 border border-yellow-500/20 rounded-2xl p-5 mb-5">
             <p className="text-yellow-400 text-xs font-semibold uppercase tracking-wider mb-3">Alamat Deposit</p>
             <p className="text-gray-500 text-xs mb-2">Kirim <strong className="text-white">{fmtC(order.cryptoAmount)} {order.asset}</strong> ke alamat berikut:</p>
-            <div className="bg-[#07071a] border border-[#1a1a3e] rounded-xl p-3 flex items-center gap-3 mb-2">
+            <div className="bg-base border border-line-subtle rounded-xl p-3 flex items-center gap-3 mb-2">
               <p className="font-mono text-xs text-white flex-1 break-all">{order.depositAddress}</p>
               <CopyButton text={order.depositAddress} label="Salin alamat deposit" />
             </div>
@@ -429,7 +429,7 @@ export default function OrderStatusPage() {
                 Sudah kirim tapi tak terdeteksi? Tempel TX hash manual →
               </button>
             ) : (
-              <div className="mt-2 p-3 bg-[#07071a] border border-[#1a1a3e] rounded-xl space-y-2">
+              <div className="mt-2 p-3 bg-base border border-line-subtle rounded-xl space-y-2">
                 <p className="text-gray-400 text-xs">Tempel TX hash dari wallet/explorer. Server memverifikasi penerima, pengirim & nominal.</p>
                 <div className="flex items-center gap-2">
                   <input
@@ -437,7 +437,7 @@ export default function OrderStatusPage() {
                     onChange={e => setManualTxHash(e.target.value.trim())}
                     placeholder="0x..."
                     spellCheck="false" autoComplete="off"
-                    className="flex-1 min-w-0 px-3 py-2 bg-[#07071a] border border-[#1a1a3e] rounded-lg text-white font-mono text-xs placeholder-gray-600 focus:outline-none focus:border-brand-500/50"
+                    className="flex-1 min-w-0 px-3 py-2 bg-base border border-line-subtle rounded-lg text-white font-mono text-xs placeholder-gray-600 focus:outline-none focus:border-brand-500/50"
                   />
                   <button onClick={submitManualTx} disabled={manualTxLoading || (() => {
                       // SOL: base58 signature 87–88 chars; EVM: 0x + 64 hex = 66 chars
@@ -455,10 +455,10 @@ export default function OrderStatusPage() {
 
         {/* SELL: Deposit confirmations */}
         {!isTopUp && order.deposit && order.deposit.confirmations > 0 && (
-          <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 mb-5">
+          <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Konfirmasi Blockchain</p>
             <div className="flex items-center gap-3">
-              <div className="flex-1 bg-[#07071a] rounded-full h-2">
+              <div className="flex-1 bg-base rounded-full h-2">
                 <div className="bg-brand-500 h-2 rounded-full transition-all"
                   style={{ width: `${order.requiredConfirmations > 0 ? Math.min(100, (order.deposit.confirmations / order.requiredConfirmations) * 100) : 0}%` }} />
               </div>
@@ -471,7 +471,7 @@ export default function OrderStatusPage() {
 
         {/* TOPUP: CRYPTO_PROCESSING — blockchain confirmation checker */}
         {isTopUp && order.status === 'CRYPTO_PROCESSING' && (
-          <div className="bg-[#0b0b1f] border border-brand-600/30 rounded-2xl p-5 mb-5">
+          <div className="bg-surface-1 border border-brand-600/30 rounded-2xl p-5 mb-5">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-8 h-8 bg-brand-600/20 rounded-xl flex items-center justify-center">
                 <RefreshCw className="w-4 h-4 text-brand-400 animate-spin" />
@@ -498,7 +498,7 @@ export default function OrderStatusPage() {
 
         {/* Tx hash */}
         {order.cryptoTxHash && (
-          <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-4 mb-5">
+          <div className="bg-surface-1 border border-line-subtle rounded-xl p-4 mb-5">
             <p className="text-gray-500 text-xs mb-2">Transaction Hash</p>
             <div className="flex items-center gap-3">
               <p className="text-gray-300 font-mono text-xs flex-1">{shortHash(order.cryptoTxHash)}</p>
@@ -514,7 +514,7 @@ export default function OrderStatusPage() {
 
         {/* SELL: Payout info */}
         {!isTopUp && order.payout && (
-          <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 mb-5">
+          <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5">
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Payout IDR</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">

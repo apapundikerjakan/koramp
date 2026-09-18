@@ -66,7 +66,7 @@ function FeeInput({
         type="number" step={step} min="0"
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-[#0a0a1a] border border-[#2a2a5c] rounded-lg text-white text-sm focus:outline-none focus:border-brand-500/50"
+        className="w-full px-3 py-2 bg-base border border-line-strong rounded-lg text-white text-sm focus:outline-none focus:border-brand-500/50"
       />
       {hint && <p className="text-gray-600 text-xs mt-0.5">{hint}</p>}
     </div>
@@ -219,9 +219,9 @@ export default function AdminSettingsPage() {
   if (!sessionChecked || !authed) return null;
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a]">
+    <div className="min-h-screen bg-base">
       {/* Nav */}
-      <nav className="bg-[#0a0a1a] border-b border-[#1e1e45]">
+      <nav className="bg-base border-b border-line">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <span className="text-white font-bold">KIPRAMP ADMIN</span>
           <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-colors">
@@ -247,7 +247,7 @@ export default function AdminSettingsPage() {
             <Key className="w-4 h-4 text-brand-400" />
             <h2 className="text-white font-semibold">Admin Access Key</h2>
           </div>
-          <div className="bg-[#111128] border border-[#1e1e45] rounded-xl p-5 space-y-4">
+          <div className="bg-surface-2 border border-line rounded-xl p-5 space-y-4">
             {keyLoading && !keyStatus ? (
               <p className="text-gray-500 text-sm">Memuat status key...</p>
             ) : keyStatus ? (
@@ -276,7 +276,7 @@ export default function AdminSettingsPage() {
                       <CheckCircle2 className="w-4 h-4 text-green-400" />
                       <p className="text-green-400 text-sm font-semibold">Key baru aktif — salin sekarang!</p>
                     </div>
-                    <div className="flex items-center gap-2 p-3 bg-[#07071a] rounded-lg border border-green-500/20">
+                    <div className="flex items-center gap-2 p-3 bg-base rounded-lg border border-green-500/20">
                       <p className="text-white font-mono text-xs flex-1 break-all">{newKey}</p>
                       <button onClick={copyNewKey} className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-semibold transition-colors">
                         {copiedKey ? <><Check className="w-3.5 h-3.5" /> Disalin!</> : <><Copy className="w-3.5 h-3.5" /> Salin</>}
@@ -307,7 +307,7 @@ export default function AdminSettingsPage() {
             ) : (
               <p className="text-gray-500 text-sm">Status key tidak tersedia.</p>
             )}
-            <p className="text-gray-600 text-xs pt-1 border-t border-[#1e1e45]">
+            <p className="text-gray-600 text-xs pt-1 border-t border-line">
               Kehilangan key &amp; terkunci? Generate dari server: <span className="font-mono text-gray-400">npm run admin:setup</span>
             </p>
           </div>
@@ -330,7 +330,7 @@ export default function AdminSettingsPage() {
               const info = prices[asset];
               const srcColor = !info ? 'text-gray-500' : info.source === 'live' ? 'text-green-400' : info.source === 'stale' ? 'text-yellow-400' : 'text-red-400';
               return (
-                <div key={asset} className="bg-[#111128] border border-[#1e1e45] rounded-xl p-4">
+                <div key={asset} className="bg-surface-2 border border-line rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className={`text-lg font-black ${ASSET_COLORS[asset]}`}>{ASSET_ICONS[asset]}</span>
@@ -353,7 +353,7 @@ export default function AdminSettingsPage() {
             <h2 className="text-white font-semibold">Konfigurasi Fee</h2>
           </div>
 
-          <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-4 mb-4 text-xs text-gray-400 space-y-1">
+          <div className="bg-surface-1 border border-line-subtle rounded-xl p-4 mb-4 text-xs text-gray-400 space-y-1">
             <p>Satu pengaturan berlaku untuk <strong className="text-white">semua aset</strong> (SOL, ETH, BNB) dan <strong className="text-white">semua tipe</strong> (Top Up &amp; Sell).</p>
             <p><span className="text-brand-400 font-semibold">Service Fee + Tax + Network Fee</span> = % dari gross IDR yang dipotong dari setiap transaksi.</p>
             <p><span className="text-purple-400 font-semibold">SOL ATA Fee</span> = flat IDR yang dicadangkan untuk biaya pembuatan ATA (Associated Token Account) saat Top Up SOL. Set 0 jika tidak perlu.</p>
@@ -362,7 +362,7 @@ export default function AdminSettingsPage() {
           {feeLoading ? (
             <div className="text-center py-8 text-gray-500 text-sm">Memuat konfigurasi...</div>
           ) : (
-            <div className="bg-[#111128] border border-[#1e1e45] rounded-xl p-6">
+            <div className="bg-surface-2 border border-line rounded-xl p-6">
               {/* 3 fee rates + ATA */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <FeeInput label="Service Fee" hint={pct(fee.serviceFeeRate)} value={fee.serviceFeeRate} step="0.001"
@@ -375,7 +375,7 @@ export default function AdminSettingsPage() {
                   <label className="block text-purple-400 text-xs font-medium mb-1">SOL ATA Fee (SOL)</label>
                   <input type="number" step="0.0001" min="0" max="0.01" value={fee.solAtaFeeIdr}
                     onChange={e => setFee(f => ({ ...f, solAtaFeeIdr: e.target.value }))}
-                    className="w-full px-3 py-2 bg-[#0a0a1a] border border-purple-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/60" />
+                    className="w-full px-3 py-2 bg-base border border-purple-500/30 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/60" />
                   <p className="text-gray-600 text-xs mt-0.5">
                     Flat SOL dipotong dari Top Up SOL. Contoh: 0.002 SOL untuk biaya ATA.
                   </p>
@@ -383,7 +383,7 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* min/max + preview */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 pb-6 border-b border-[#1e1e45]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 pb-6 border-b border-line">
                 <FeeInput label="Min Order (IDR)" hint={fmt(fee.minOrderIdr || 0)} value={fee.minOrderIdr} step="1000"
                   onChange={v => setFee(f => ({ ...f, minOrderIdr: v }))} />
                 <FeeInput label="Max Order (IDR)" hint={fmt(fee.maxOrderIdr || 0)} value={fee.maxOrderIdr} step="100000"
@@ -391,11 +391,11 @@ export default function AdminSettingsPage() {
               </div>
 
               {/* Summary preview */}
-              <div className="bg-[#0a0a1a] rounded-xl p-4 mb-6">
+              <div className="bg-base rounded-xl p-4 mb-6">
                 <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Preview — berlaku untuk semua aset</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   {(['SOL', 'ETH', 'BNB'] as const).map(a => (
-                    <div key={a} className={`p-3 rounded-lg bg-[#111128] border ${a === 'SOL' ? 'border-purple-500/20' : 'border-[#1e1e45]'}`}>
+                    <div key={a} className={`p-3 rounded-lg bg-surface-2 border ${a === 'SOL' ? 'border-purple-500/20' : 'border-line'}`}>
                       <p className={`font-bold mb-1 ${ASSET_COLORS[a]}`}>{ASSET_ICONS[a]} {a}</p>
                       <p className="text-gray-500">Service: <span className="text-white">{pct(fee.serviceFeeRate)}</span></p>
                       <p className="text-gray-500">Tax: <span className="text-white">{pct(fee.taxRate)}</span></p>
@@ -419,7 +419,7 @@ export default function AdminSettingsPage() {
         </section>
 
         {/* Fee note */}
-        <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-4 flex items-start gap-3">
+        <div className="bg-surface-1 border border-line-subtle rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
           <p className="text-gray-400 text-xs">
             Perubahan fee berlaku untuk quote baru saja. Order yang sudah dibuat menggunakan fee saat order dibuat.

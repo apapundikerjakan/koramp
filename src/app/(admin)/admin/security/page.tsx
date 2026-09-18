@@ -178,12 +178,12 @@ export default function AdminSecurityPage() {
         {summary && (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
             {(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map((s) => (
-              <div key={s} className="bg-[#111128] border border-[#1e1e45] rounded-xl p-4">
+              <div key={s} className="bg-surface-2 border border-line rounded-xl p-4">
                 <p className="text-gray-500 text-xs mb-1">{s} (24h)</p>
                 <p className="text-white text-2xl font-black">{summary.counts24h[s] ?? 0}</p>
               </div>
             ))}
-            <div className="bg-[#111128] border border-[#1e1e45] rounded-xl p-4">
+            <div className="bg-surface-2 border border-line rounded-xl p-4">
               <p className="text-gray-500 text-xs mb-1">Active bans</p>
               <p className="text-white text-2xl font-black">{summary.activeBans}</p>
             </div>
@@ -196,7 +196,7 @@ export default function AdminSecurityPage() {
             <h2 className="text-white font-semibold text-sm">Security Events</h2>
             <span className="text-gray-500 text-xs">({total})</span>
             <div className="ml-auto flex gap-2">
-              <select value={sev} onChange={(e) => setSev(e.target.value)} className="bg-[#0b0b1f] border border-[#1e1e45] text-gray-300 text-xs rounded-lg px-2 py-1.5">
+              <select value={sev} onChange={(e) => setSev(e.target.value)} className="bg-surface-1 border border-line text-gray-300 text-xs rounded-lg px-2 py-1.5">
                 <option value="">Semua severity</option>
                 <option value="CRITICAL">CRITICAL</option>
                 <option value="HIGH">HIGH</option>
@@ -206,14 +206,14 @@ export default function AdminSecurityPage() {
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
                 <input value={ipFilter} onChange={(e) => setIpFilter(e.target.value)} placeholder="Filter IP…"
-                  className="bg-[#0b0b1f] border border-[#1e1e45] text-gray-300 text-xs rounded-lg pl-7 pr-2 py-1.5 w-36" />
+                  className="bg-surface-1 border border-line text-gray-300 text-xs rounded-lg pl-7 pr-2 py-1.5 w-36" />
               </div>
             </div>
           </div>
-          <div className="bg-[#111128] border border-[#1e1e45] rounded-xl overflow-x-auto">
+          <div className="bg-surface-2 border border-line rounded-xl overflow-x-auto">
             <table className="w-full text-sm min-w-[720px]">
               <thead>
-                <tr className="text-left text-gray-500 text-xs border-b border-[#1e1e45]">
+                <tr className="text-left text-gray-500 text-xs border-b border-line">
                   <th className="py-2.5 pl-4 pr-2">Severity</th>
                   <th className="py-2.5 px-2">Event</th>
                   <th className="py-2.5 px-2">IP / subnet</th>
@@ -225,7 +225,7 @@ export default function AdminSecurityPage() {
               </thead>
               <tbody>
                 {events.map((e) => (
-                  <tr key={e.id} className="border-b border-[#1a1a3e] last:border-0">
+                  <tr key={e.id} className="border-b border-line-subtle last:border-0">
                     <td className="py-2.5 pl-4 pr-2">
                       <span className={clsx('text-xs font-bold px-2 py-0.5 rounded-full border', SEV_COLOR[e.severity] ?? SEV_COLOR.LOW)}>{e.severity}</span>
                     </td>
@@ -262,10 +262,10 @@ export default function AdminSecurityPage() {
               <Ban className="w-4 h-4" /> Ban 1 jam
             </button>
           </form>
-          <div className="bg-[#111128] border border-[#1e1e45] rounded-xl overflow-x-auto">
+          <div className="bg-surface-2 border border-line rounded-xl overflow-x-auto">
             <table className="w-full text-sm min-w-[860px]">
               <thead>
-                <tr className="text-left text-gray-500 text-xs border-b border-[#1e1e45]">
+                <tr className="text-left text-gray-500 text-xs border-b border-line">
                   <th className="py-2.5 pl-4 pr-2">IP</th>
                   <th className="py-2.5 px-2">Level / violations</th>
                   <th className="py-2.5 px-2">Duration</th>
@@ -277,7 +277,7 @@ export default function AdminSecurityPage() {
               </thead>
               <tbody>
                 {bans.map((b) => (
-                  <tr key={b.ip} className="border-b border-[#1a1a3e] last:border-0">
+                  <tr key={b.ip} className="border-b border-line-subtle last:border-0">
                     <td className="py-2.5 pl-4 pr-2 text-white text-xs font-mono">
                       {b.ip}
                       <div className="text-gray-600">{b.restrictionId}</div>

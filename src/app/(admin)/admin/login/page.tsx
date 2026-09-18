@@ -27,7 +27,7 @@ function RestrictedCountdown({ remaining, retryAfter, restrictionId, onExpire }:
   }, [left, onExpire]);
 
   return (
-    <div className="w-full max-w-md text-center bg-[#111128] border border-[#1e1e45] rounded-xl p-8">
+    <div className="w-full max-w-md text-center bg-surface-2 border border-line rounded-xl p-8">
       <p className="text-brand-400 text-xs font-bold tracking-widest mb-2">KIPRAMP SECURITY</p>
       <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
         <ShieldAlert className="w-6 h-6 text-red-400" />
@@ -81,7 +81,7 @@ export default function AdminLoginPage() {
 
   if (restriction) {
     return (
-      <div className="min-h-screen bg-[#0a0a1a] flex items-center justify-center px-4">
+      <div className="min-h-screen bg-base flex items-center justify-center px-4">
         <RestrictedCountdown
           remaining={restriction.remaining}
           retryAfter={restriction.retryAfter}
@@ -138,7 +138,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a1a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-base flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-white">KIPRAMP ADMIN</h1>
@@ -147,7 +147,7 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
-        <div className="bg-[#111128] border border-[#1e1e45] rounded-xl p-6">
+        <div className="bg-surface-2 border border-line rounded-xl p-6">
           {step === 1 ? (
             <form onSubmit={handleKeyNext} className="space-y-4">
               <div>
@@ -163,7 +163,7 @@ export default function AdminLoginPage() {
                   value={key}
                   onChange={(e) => setKey(e.target.value.replace(/\s+/g, '').toLowerCase())}
                   placeholder="64-character hex key"
-                  className="w-full px-4 py-3 bg-[#0a0a1a] border border-[#2a2a5c] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50 transition-colors font-mono text-sm"
+                  className="w-full px-4 py-3 bg-base border border-line-strong rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50 transition-colors font-mono text-sm"
                   autoComplete="off"
                   spellCheck="false"
                 />
@@ -207,7 +207,7 @@ export default function AdminLoginPage() {
                   value={code}
                   onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
                   placeholder="123456"
-                  className="w-full px-4 py-3 bg-[#0a0a1a] border border-[#2a2a5c] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50 transition-colors font-mono text-center text-2xl tracking-[0.5em]"
+                  className="w-full px-4 py-3 bg-base border border-line-strong rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50 transition-colors font-mono text-center text-2xl tracking-[0.5em]"
                 />
                 <p className="text-gray-500 text-xs mt-1.5">
                   Buka aplikasi authenticator, masukkan kode yang tampil. Kode berganti tiap 30 detik — Anda punya ~1 menit (toleransi ±1 langkah).
@@ -241,7 +241,7 @@ export default function AdminLoginPage() {
             </form>
           )}
 
-          <div className="mt-4 pt-4 border-t border-[#1e1e45]">
+          <div className="mt-4 pt-4 border-t border-line">
             <p className="text-gray-500 text-xs text-center">
               1 kunci = 1 perangkat. Login baru menendang session lama.
             </p>

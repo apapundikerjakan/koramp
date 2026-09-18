@@ -80,7 +80,7 @@ export function FeeBreakdown(p: FeeBreakdownProps) {
           </div>
         </>
       )}
-      <div className={clsx('flex justify-between font-semibold pt-1.5 border-t border-[#1a1a3e]', t)}>
+      <div className={clsx('flex justify-between font-semibold pt-1.5 border-t border-line-subtle', t)}>
         <span className="text-gray-300">Total potongan{totalPct}</span>
         <span className="text-red-400">− {formatIDR(total)}</span>
       </div>

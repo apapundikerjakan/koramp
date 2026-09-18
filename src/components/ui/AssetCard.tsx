@@ -58,7 +58,7 @@ export function AssetCard({ asset, selected, onClick }: AssetCardProps) {
         info.glow,
         selected
           ? 'selected border-brand-500 bg-brand-600/10 glass'
-          : 'border-[#1e1e45] bg-[#111128] hover:border-[#2a2a5c] hover:bg-[#161635]',
+          : 'border-line bg-surface-2 hover:border-line-strong hover:bg-surface-3',
       )}
       type="button"
     >

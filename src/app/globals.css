@@ -1,35 +1,38 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@300;400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* === Kiswap foundation (prompt UI §3 — closed set, fully composable) === */
-  --bg-base:        #07071a;
-  --bg-surface-1:   #0b0b1f;
-  --bg-surface-2:   #111128;
-  --bg-surface-3:   #16163a;
-  --border-subtle:  #1a1a3e;
-  --border-default: #1e1e45;
-  --border-strong:  #2d2d6b;
-  --brand:          #6366f1;
-  --brand-glow:     rgba(99, 102, 241, 0.15);
-  --brand-ring:     rgba(99, 102, 241, 0.30);
+  /* === Kiswap "money-changer counter" (bottle green + brass + ivory) === */
+  --bg-base:        #0E120F;
+  --bg-surface-1:   #131916;
+  --bg-surface-2:   #182019;
+  --bg-surface-3:   #1F2A21;
+  --border-subtle:  #243026;
+  --border-default: #2C3A2E;
+  --border-strong:  #3D5240;
+  --accent:         #C7A048;
+  --accent-hover:   #D9B75F;
+  --accent-deep:    #1F5C43;
+  --accent-deep-glow: rgba(31, 92, 67, 0.25);
+  --success:        #4CAF6D;
+  --error:          #E15B4F;
+  --warning:        #D9A441;
+  --info:           #4A90A4;
+  --text-primary:   #F5F1E8;
+  --text-secondary: #9FAB9F;
+  --text-muted:     #5E6B60;
+  --text-disabled:  #374151;
+
+  /* Asset colors — ONLY for token badges/logos, never UI chrome */
   --sol:            #a855f7;
   --sol-glow:       rgba(168, 85, 247, 0.20);
   --eth:            #3b82f6;
   --eth-glow:       rgba(59, 130, 246, 0.20);
   --bnb:            #eab308;
   --bnb-glow:       rgba(234, 179, 8, 0.20);
-  --success:        #22c55e;
-  --error:          #ef4444;
-  --warning:        #f59e0b;
-  --info:           #38bdf8;
-  --text-primary:   #ffffff;
-  --text-secondary: #9ca3af;
-  --text-muted:     #4b5563;
-  --text-disabled:  #374151;
 
   /* Motion */
   --duration-instant: 100ms;
@@ -52,52 +55,53 @@
   }
 
   body {
-    @apply bg-[#07071a] text-white;
-    font-family: 'Inter', 'Geist', system-ui, -apple-system, sans-serif;
+    @apply bg-base text-ink-primary;
+    font-family: 'Public Sans', system-ui, -apple-system, sans-serif;
   }
 
-  /* Visible keyboard focus everywhere (prompt UI §8) */
+  /* Visible keyboard focus everywhere */
   :focus-visible {
-    outline: 2px solid var(--brand);
+    outline: 2px solid var(--accent);
     outline-offset: 2px;
     border-radius: 6px;
   }
 
   /* Scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #07071a; }
-  ::-webkit-scrollbar-thumb { background: #1a1a3e; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2a2a5e; }
+  ::-webkit-scrollbar-track { background: #0E120F; }
+  ::-webkit-scrollbar-thumb { background: #243026; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3D5240; }
 }
 
 @layer components {
   /* ── CARDS ── */
   .card {
-    @apply bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl;
+    @apply bg-surface-1 border border-line-subtle rounded-2xl;
   }
   .card-elevated {
-    @apply bg-[#0f0f28] border border-[#232350] rounded-2xl;
+    @apply bg-surface-2 border border-line rounded-2xl;
   }
-  /* Liquid glass (KokonutUI) — selected cards, modals */
+  /* Liquid glass — selected cards, modals */
   .glass {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(245, 241, 232, 0.03);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(245, 241, 232, 0.08);
   }
 
   /* ── BUTTONS ── */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2
-           bg-brand-600 hover:bg-brand-500 active:bg-brand-700
-           text-white font-semibold px-6 py-3 rounded-xl
+           text-[#131916] font-bold px-6 py-3 rounded-xl
            transition-all duration-150 cursor-pointer
            disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-[#07071a];
+           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-base;
+    background: linear-gradient(180deg, var(--accent-hover), var(--accent));
   }
   .btn-primary:not(:disabled):hover {
     transform: scale(1.02);
-    box-shadow: 0 0 20px var(--brand-glow);
+    box-shadow: 0 0 20px rgba(199, 160, 72, 0.25);
+    filter: brightness(1.05);
   }
   .btn-primary:not(:disabled):active {
     transform: scale(0.98);
@@ -105,42 +109,42 @@
   }
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2
-           bg-[#111130] hover:bg-[#181840] border border-[#232350]
-           text-white font-semibold px-6 py-3 rounded-xl
+           bg-surface-2 hover:bg-surface-3 border border-line
+           text-ink-primary font-semibold px-6 py-3 rounded-xl
            transition-all duration-150 cursor-pointer
            disabled:opacity-50 disabled:cursor-not-allowed
-           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-[#07071a];
+           focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-base;
   }
   .btn-secondary:not(:disabled):hover { border-color: var(--border-strong); }
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2
-           text-gray-400 hover:text-white hover:bg-white/5
+           text-ink-secondary hover:text-ink-primary hover:bg-white/5
            font-medium px-4 py-2 rounded-xl
            transition-all duration-150 cursor-pointer;
   }
   .icon-btn {
     @apply w-9 h-9 rounded-full inline-flex items-center justify-center
-           text-gray-400 hover:text-white hover:bg-[#111128]
+           text-ink-secondary hover:text-ink-primary hover:bg-surface-2
            transition-colors cursor-pointer flex-shrink-0;
   }
 
   /* ── FORM ── */
   .input-field {
-    @apply w-full bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl px-4 py-3
-           text-white placeholder-gray-600
+    @apply w-full bg-surface-1 border border-line-subtle rounded-xl px-4 py-3
+           text-ink-primary placeholder-ink-muted
            focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
            transition-all duration-150;
   }
   .input-field:focus {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 3px var(--brand-ring);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(199, 160, 72, 0.25);
   }
   .input-error {
     border-color: var(--error) !important;
     animation: shake 0.4s ease-in-out;
   }
   .label {
-    @apply text-sm font-medium text-gray-400 mb-1.5 block;
+    @apply text-sm font-medium text-ink-secondary mb-1.5 block;
   }
 
   /* ── BADGES ── */
@@ -152,6 +156,16 @@
   .badge-purple   { @apply badge bg-purple-500/15 text-purple-400 border border-purple-500/20; }
   .badge-brand    { @apply badge bg-brand-500/15 text-brand-400 border border-brand-500/20; }
 
+  /* ── Display type + tabular numbers ── */
+  .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+  .tnum {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
   /* ── NAV underline slide ── */
   .nav-link { position: relative; }
   .nav-link::after {
@@ -159,16 +173,16 @@
     position: absolute;
     left: 1rem; right: 1rem; bottom: 4px;
     height: 2px; border-radius: 2px;
-    background: var(--brand);
+    background: var(--accent);
     transform: scaleX(0);
     transform-origin: left;
     transition: transform 200ms var(--ease-out);
   }
   .nav-link:hover::after, .nav-link[data-active="true"]::after { transform: scaleX(1); }
 
-  /* ── Shimmer text (KokonutUI) ── */
+  /* ── Shimmer text ── */
   .shimmer-text {
-    background: linear-gradient(90deg, #4b5563 25%, #e5e7eb 50%, #4b5563 75%);
+    background: linear-gradient(90deg, #5E6B60 25%, #F5F1E8 50%, #5E6B60 75%);
     background-size: 200% 100%;
     -webkit-background-clip: text;
     background-clip: text;
@@ -176,25 +190,41 @@
     animation: shimmer 1.8s linear infinite;
   }
 
-  /* ── Hero animated grid (UImaxxing) ── */
+  /* ── Ledger grid (rate board / kas motif, NOT a glow blob) ── */
+  .ledger-grid {
+    background-image:
+      linear-gradient(rgba(199, 160, 72, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(199, 160, 72, 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, black 30%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, black 30%, transparent 78%);
+  }
+  /* Legacy alias (pre-redesign name) */
   .hero-grid {
     background-image:
-      linear-gradient(rgba(99, 102, 241, 0.07) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(99, 102, 241, 0.07) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
-    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 30%, transparent 75%);
+      linear-gradient(rgba(199, 160, 72, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(199, 160, 72, 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, black 30%, transparent 78%);
+    -webkit-mask-image: radial-gradient(ellipse 90% 80% at 50% 20%, black 30%, transparent 78%);
   }
+
+  /* ── Rate board hairline rows ── */
+  .rate-row {
+    @apply flex items-center justify-between gap-4 px-4 sm:px-5 py-3.5;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .rate-row:last-child { border-bottom: 0; }
 
   /* ── Streaming cursor ── */
   .stream-cursor::after {
     content: '▍';
     margin-left: 1px;
-    color: var(--brand);
+    color: var(--accent);
     animation: blink 1s steps(1) infinite;
   }
 
-  /* ── Asset card lift + glow ── */
+  /* ── Asset card lift + glow (glow = token identity only) ── */
   .asset-lift { transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out), border-color 200ms var(--ease-out); }
   .asset-lift:hover { transform: translateY(-4px); }
   .glow-sol:hover, .glow-sol.selected { box-shadow: 0 8px 32px var(--sol-glow); border-color: rgba(168, 85, 247, 0.45) !important; }

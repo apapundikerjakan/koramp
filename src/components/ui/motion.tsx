@@ -105,11 +105,11 @@ export function StaggerItem({ children, className }: { children: ReactNode; clas
 // ─── Beam border (Beam libraries.dev) ─────────────────────────────────────────
 
 const BEAM_COLORS: Record<string, string> = {
-  brand: '#6366f1, #a855f7, #38bdf8, #6366f1',
-  sol: '#a855f7, #6366f1, #e879f9, #a855f7',
-  eth: '#3b82f6, #38bdf8, #6366f1, #3b82f6',
+  brand: '#C7A048, #D9B75F, #1F5C43, #C7A048',
+  sol: '#a855f7, #C7A048, #e879f9, #a855f7',
+  eth: '#3b82f6, #C7A048, #4A90A4, #3b82f6',
   bnb: '#eab308, #f59e0b, #fde047, #eab308',
-  green: '#22c55e, #4ade80, #a3e635, #22c55e',
+  green: '#4CAF6D, #2A7A58, #a3e635, #4CAF6D',
 };
 
 /** Animated conic-gradient border. Inactive → plain subtle border. */
@@ -332,11 +332,11 @@ export function TaskRow({
         ) : state === 'failed' ? (
           <XCircle className="w-5 h-5 text-red-400" />
         ) : (
-          <Circle className="w-5 h-5 text-[#2a2a4e]" />
+          <Circle className="w-5 h-5 text-ink-muted" />
         )}
       </span>
       <div className="min-w-0">
-        <p className={clsx('text-sm', state === 'done' ? 'text-green-400' : state === 'running' ? 'text-white font-semibold' : state === 'failed' ? 'text-red-400' : 'text-[#2a2a4e]')}>
+        <p className={clsx('text-sm', state === 'done' ? 'text-green-400' : state === 'running' ? 'text-white font-semibold' : state === 'failed' ? 'text-red-400' : 'text-ink-muted')}>
           {label}
         </p>
         {detail && <p className="text-xs text-gray-500 truncate">{detail}</p>}
@@ -599,7 +599,7 @@ export function CopyButton({ text, label = 'Salin' }: { text: string; label?: st
 
 // ─── Particle burst (KokonutUI success) ───────────────────────────────────────
 
-export function ParticleBurst({ count = 50, colors = ['#6366f1', '#a855f7', '#22c55e', '#eab308'] }: { count?: number; colors?: string[] }) {
+export function ParticleBurst({ count = 50, colors = ['#C7A048', '#1F5C43', '#F5F1E8', '#D9A441'] }: { count?: number; colors?: string[] }) {
   const reduce = useReducedMotion();
   const parts = useMemo(() => {
     let seed = 42;

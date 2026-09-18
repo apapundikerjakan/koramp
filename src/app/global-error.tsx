@@ -22,24 +22,24 @@ export default function GlobalError({
 
   return (
     <html lang="id">
-      <body style={{ background: '#07071a', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+      <body style={{ background: '#0E120F', color: '#F5F1E8', fontFamily: 'system-ui, sans-serif' }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ maxWidth: 420, textAlign: 'center' }}>
             <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Terjadi kesalahan</h1>
-            <p style={{ color: '#8a8aa3', fontSize: 14, marginBottom: 20 }}>
+            <p style={{ color: '#9FAB9F', fontSize: 14, marginBottom: 20 }}>
               Halaman gagal dimuat. Coba lagi — jika berlanjut, hubungi tim Kipramp.
             </p>
             <button
               onClick={() => reset()}
               style={{
-                padding: '10px 24px', background: '#4f46e5', color: '#fff',
+                padding: '10px 24px', background: '#C7A048', color: '#131916',
                 border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer',
               }}
             >
               Coba lagi
             </button>
             {error.digest && (
-              <p style={{ color: '#4a4a6a', fontSize: 11, marginTop: 16, fontFamily: 'monospace' }}>
+              <p style={{ color: '#5E6B60', fontSize: 11, marginTop: 16, fontFamily: 'monospace' }}>
                 Ref: {error.digest}
               </p>
             )}

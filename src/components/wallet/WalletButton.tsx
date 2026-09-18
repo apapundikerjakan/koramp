@@ -67,7 +67,7 @@ export function WalletButton() {
         <div className="relative">
           <button
             onClick={() => setSolOpen(!solOpen)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#0f0f2a] border border-[#1e1e48] hover:border-purple-600/40 rounded-xl text-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-surface-2 border border-line hover:border-line-strong rounded-xl text-sm transition-all"
           >
             <span className="w-2 h-2 bg-purple-400 rounded-full" />
             <span className="text-xs font-semibold hidden sm:inline px-1.5 py-0.5 rounded-full border text-purple-400 bg-purple-500/10 border-purple-500/20">
@@ -80,8 +80,8 @@ export function WalletButton() {
           {solOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setSolOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 w-64 bg-[#0c0c22] border border-[#1e1e48] rounded-xl shadow-2xl z-50 overflow-hidden">
-                <div className="px-4 py-3 border-b border-[#1e1e48]">
+              <div className="absolute right-0 top-full mt-2 w-64 bg-surface-2 border border-line rounded-xl shadow-2xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-line">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-gray-500 text-xs">{solWalletName ?? 'Solana Wallet'}</span>
                     <span className="text-xs text-purple-400">Solana</span>
@@ -112,7 +112,7 @@ export function WalletButton() {
         <button
           onClick={() => setShowConnectModal(true)}
           title="Tambah Solana wallet"
-          className="flex items-center gap-1 px-2.5 py-2 bg-[#0f0f2a] border border-[#1e1e48] hover:border-purple-600/40 rounded-xl text-gray-500 hover:text-purple-400 transition-all"
+          className="flex items-center gap-1 px-2.5 py-2 bg-surface-2 border border-line hover:border-line-strong rounded-xl text-gray-500 hover:text-purple-400 transition-all"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="hidden sm:inline text-xs font-semibold">SOL</span>

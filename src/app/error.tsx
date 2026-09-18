@@ -19,7 +19,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-[#07071a] flex items-center justify-center px-4">
+    <div className="min-h-screen bg-base flex items-center justify-center px-4">
       <div className="w-full max-w-md text-center">
         <h1 className="text-xl font-bold text-white mb-2">Terjadi kesalahan</h1>
         <p className="text-gray-400 text-sm mb-5">

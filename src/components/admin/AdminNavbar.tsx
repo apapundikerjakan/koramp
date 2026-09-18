@@ -6,11 +6,11 @@ import { LogOut } from 'lucide-react';
 /** Minimal admin header — no wallet bundle (P2/P24). */
 export function AdminNavbar({ onLogout }: { onLogout?: () => void }) {
   return (
-    <nav className="sticky top-0 z-40 border-b border-[#1a1a3e] bg-[#0a0a1a]/95 backdrop-blur-xl">
+    <nav className="sticky top-0 z-40 border-b border-line-subtle bg-base/95 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/admin" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#C7A048] to-[#1F5C43] rounded-lg flex items-center justify-center">
               <span className="text-white font-black text-sm">K</span>
             </div>
             <span className="text-white font-bold text-lg tracking-tight">Kipramp <span className="text-gray-500 text-sm font-medium">ADMIN</span></span>

@@ -214,7 +214,7 @@ export default function AdminSellPage() {
                 value={searchInput}
                 onChange={e => setSearchInput(e.target.value)}
                 placeholder="Cari Order ID, publicId, atau wallet address..."
-                className="w-full pl-9 pr-9 py-2 bg-[#111128] border border-[#1e1e45] rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50"
+                className="w-full pl-9 pr-9 py-2 bg-surface-2 border border-line rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50"
               />
               {searchInput && (
                 <button
@@ -250,7 +250,7 @@ export default function AdminSellPage() {
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border transition-colors ${
                 status === s
                   ? 'bg-brand-600/20 text-brand-400 border-brand-600/30'
-                  : 'text-gray-500 border-[#1e1e45] hover:text-gray-300'
+                  : 'text-gray-500 border-line hover:text-gray-300'
               }`}
             >
               {s || 'All'}
@@ -262,7 +262,7 @@ export default function AdminSellPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-gray-500 border-b border-[#1e1e45]">
+              <tr className="text-gray-500 border-b border-line">
                 <th className="text-left pb-3 font-medium">Order</th>
                 <th className="text-left pb-3 font-medium">Order ID</th>
                 <th className="text-left pb-3 font-medium">User</th>
@@ -275,7 +275,7 @@ export default function AdminSellPage() {
                 <th className="text-center pb-3 font-medium">Aksi</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1e1e45]">
+            <tbody className="divide-y divide-line">
               {orders.map(o => (
                 <tr key={o.id} className="hover:bg-white/[0.02]">
 
@@ -293,7 +293,7 @@ export default function AdminSellPage() {
                   {/* Order ID (publicId) */}
                   <td className="py-3 pr-4">
                     <div className="flex items-center gap-0.5">
-                      <span className="font-mono text-xs text-gray-400 bg-[#0f0f2a] border border-[#1e1e45] rounded px-1.5 py-0.5">
+                      <span className="font-mono text-xs text-gray-400 bg-surface-2 border border-line rounded px-1.5 py-0.5">
                         {o.publicId}
                       </span>
                       <CopyButton value={o.publicId} />

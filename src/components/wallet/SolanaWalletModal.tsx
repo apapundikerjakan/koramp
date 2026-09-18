@@ -67,10 +67,10 @@ export function SolanaWalletModal() {
       <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowConnectModal(false)} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-sm bg-[#0c0c22] border border-[#1e1e48] rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
+      <div className="relative w-full max-w-sm bg-surface-2 border border-line rounded-2xl shadow-2xl overflow-hidden animate-fade-in">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#1e1e48]">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-purple-600/20 rounded-xl flex items-center justify-center text-xl">
               ◎
@@ -131,8 +131,8 @@ export function SolanaWalletModal() {
                   className={clsx(
                     'w-full flex items-center gap-3 p-3.5 rounded-xl border text-left transition-all',
                     detected
-                      ? 'border-[#1e1e48] hover:border-purple-500/40 hover:bg-purple-500/5'
-                      : 'border-[#1a1a3a] opacity-70 hover:opacity-100',
+                      ? 'border-line hover:border-line-strong hover:bg-white/5'
+                      : 'border-line-subtle opacity-70 hover:opacity-100',
                   )}
                 >
                   <span className="text-2xl w-8 text-center">{icon}</span>

@@ -39,7 +39,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0" aria-label="Kipramp beranda">
-            <div className="w-8 h-8 bg-gradient-to-br from-brand-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/20 transition-transform duration-150 group-hover:scale-105">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#C7A048] to-[#1F5C43] rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/20 transition-transform duration-150 group-hover:scale-105">
               <span className="text-white font-black text-sm">K</span>
             </div>
             <span className="text-white font-bold text-xl tracking-tight">
@@ -85,7 +85,7 @@ export function Navbar() {
 
         {/* Mobile menu */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-[#1a1a3e] py-3 space-y-1 pb-4 animate-fade-in">
+          <div className="md:hidden border-t border-line-subtle py-3 space-y-1 pb-4 animate-fade-in">
             {NAV_LINKS.map(link => (
               <Link
                 key={link.href}
