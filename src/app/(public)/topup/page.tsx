@@ -8,7 +8,7 @@ import { ArrowRight, AlertTriangle, Clock, CheckCircle2, RefreshCw, Copy, Info, 
 import { toast } from 'sonner';
 import clsx from 'clsx';
 import { CHAIN_NAMES, getTxExplorerUrl } from '@/lib/assets';
-import { FeeBreakdown } from '@/components/ui/FeeBreakdown';
+import { FormGrid, SummaryPanel } from '@/components/order/SummaryPanel';
 import {
   StepIndicator, QrFrame, ToolChip, StreamingText,
   AnimatedCounter, ParticleBurst, ShimmerText,
@@ -259,7 +259,7 @@ export default function TopUpPage() {
   return (
     <div className="min-h-screen bg-base">
       <Navbar />
-      <div className="max-w-lg mx-auto px-4 py-10">
+      <div className="max-w-6xl mx-auto px-4 py-10">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-1">
@@ -286,7 +286,8 @@ export default function TopUpPage() {
 
         {/* ── STEP: ASSET ─────────────────────────────────────── */}
         {step === 'asset' && (
-          <div className="space-y-4 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <div className="space-y-4">
             <p className="text-gray-400 text-sm font-semibold">Pilih crypto yang ingin dibeli</p>
             <div className="space-y-3">
               {(['SOL', 'ETH', 'BNB'] as Asset[]).map(a => {
@@ -357,11 +358,13 @@ export default function TopUpPage() {
               Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
             </button>
           </div>
+          </FormGrid>
         )}
 
         {/* ── STEP: AMOUNT ─────────────────────────────────── */}
         {step === 'amount' && asset && (
-          <div className="space-y-5 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <div className="space-y-5">
             <button onClick={() => setStep('asset')} className="text-gray-500 hover:text-white text-sm flex items-center gap-1">← Kembali</button>
 
             <div className="flex items-center gap-3 p-4 bg-surface-1 rounded-xl border border-line-subtle">
@@ -408,72 +411,24 @@ export default function TopUpPage() {
               </p>
             )}
           </div>
+          </FormGrid>
         )}
 
         {/* ── STEP: CONFIRM ────────────────────────────────── */}
         {step === 'confirm' && quote && asset && (
-          <div className="space-y-5 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
+          <div className="space-y-5">
             <button onClick={() => setStep('amount')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
 
-            {/* Main summary box */}
-            <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 space-y-3">
-
-              {/* What user pays */}
-              <div className="flex justify-between items-center pb-3 border-b border-line-subtle">
-                <span className="text-gray-400 text-sm">Anda bayar</span>
-                <span className="text-white font-bold text-lg">{fmt(quote.idrAmount)}</span>
-              </div>
-
-              {/* Fee breakdown — kalkulator transparan (sama untuk semua transaksi) */}
-              <div className="pb-3 border-b border-line-subtle">
-                <FeeBreakdown
-                  gross={quote.idrAmount}
-                  serviceFee={quote.serviceFee}
-                  serviceFeeRate={quote.serviceFeeRate}
-                  networkFee={quote.networkFee}
-                  networkFeeRate={quote.networkFeeRate}
-                  tax={quote.tax ?? 0}
-                  taxRate={quote.taxRate}
-                />
-                <div className="flex justify-between text-sm font-medium pt-2">
-                  <span className="text-gray-400">Dana untuk beli crypto</span>
-                  <span className="text-white">
-                    {fmt(
-                      Math.max(0,
-                        parseFloat(quote.idrAmount) -
-                        parseFloat(quote.serviceFee) -
-                        parseFloat(quote.tax ?? 0) -
-                        parseFloat(quote.networkFee)
-                      )
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* Rate */}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Rate</span>
-                <span className="text-gray-300">1 {asset} = {fmt(quote.exchangeRate)}</span>
-              </div>
-
-              {/* What user receives */}
-              <div className="flex justify-between items-center pt-2 border-t border-line-subtle">
-                <span className="text-gray-400 text-sm font-semibold">Anda terima</span>
-                <AnimatedCounter
-                  value={parseFloat(quote.cryptoAmount) || 0}
-                  format={(n) => `${fmtCrypto(n)} ${asset}`}
-                  className={clsx('font-black text-xl', info?.color)}
-                />
-              </div>
+            {/* Mobile summary (panel desktop disembunyikan di mobile) */}
+            <div className="lg:hidden">
+              <SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />
             </div>
 
-            {/* Visual note */}
-            <div className="flex items-start gap-2 p-3 bg-surface-1 border border-line-subtle rounded-xl">
-              <span className="text-yellow-400 text-xs mt-0.5">ℹ</span>
-              <p className="text-gray-500 text-xs">
-                Dari {fmt(quote.idrAmount)} yang Anda bayar, dipotong biaya layanan {fmt(quote.serviceFee)} + tax {fmt(quote.tax ?? 0)} + biaya jaringan {fmt(quote.networkFee)}.
-                Sisa {fmt(Math.max(0, parseFloat(quote.idrAmount) - parseFloat(quote.serviceFee) - parseFloat(quote.tax ?? 0) - parseFloat(quote.networkFee)))} digunakan untuk membeli {fmtCrypto(quote.cryptoAmount)} {asset}.
-              </p>
+            {/* Anda bayar — ringkas, rincian penuh ada di panel */}
+            <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 flex justify-between items-center">
+              <span className="text-gray-400 text-sm">Anda bayar</span>
+              <span className="tnum text-white font-bold text-lg">{fmt(quote.totalIdr)}</span>
             </div>
 
             {/* SOL ATA fee notice */}
@@ -492,28 +447,20 @@ export default function TopUpPage() {
               <p className="text-white font-mono text-sm break-all">{resolvedAddress}</p>
             </div>
 
-            {/* Quote expiry countdown */}
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className={`w-4 h-4 ${quoteRefreshing ? 'text-brand-400 animate-spin' : 'text-yellow-400'}`} />
-              {quoteRefreshing ? (
-                <span className="text-brand-400">Memperbarui harga...</span>
-              ) : (
-                <span className={quoteExpiry < 15 ? 'text-red-400' : quoteExpiry < 30 ? 'text-yellow-400' : 'text-gray-400'}>
-                  Harga diperbarui dalam {quoteExpiry}s
-                </span>
-              )}
-            </div>
+            {/* Quote expiry countdown tampil di panel ringkasan (desktop)
+                dan panel mobile di atas — tidak diduplikasi di sini. */}
 
             <button className="btn-primary w-full text-base py-3.5" disabled={submitting || quoteRefreshing || quoteExpiry === 0}
               onClick={createOrder}>
               {submitting ? <><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Membuat order...</> : quoteExpiry === 0 ? 'Memperbarui harga...' : `Bayar ${fmt(quote.totalIdr)} →`}
             </button>
           </div>
+          </FormGrid>
         )}
 
         {/* ── STEP: PAYMENT ────────────────────────────────── */}
         {step === 'payment' && order && payment && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full">
             <div className="text-center">
               <div className="w-14 h-14 bg-yellow-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <Clock className="w-7 h-7 text-yellow-400 animate-pulse" />
@@ -626,7 +573,7 @@ export default function TopUpPage() {
 
         {/* ── STEP: SUCCESS ─────────────────────────────────── */}
         {step === 'success' && (
-          <div className="relative text-center space-y-5 animate-fade-in">
+          <div className="relative text-center space-y-5 animate-fade-in max-w-lg mx-auto w-full">
             {cryptoConfirmed && <ParticleBurst />}
             <div className={clsx(
               'w-20 h-20 rounded-full flex items-center justify-center mx-auto',

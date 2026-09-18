@@ -13,9 +13,9 @@ import { toast } from 'sonner';
 import clsx from 'clsx';
 import { buildPaymentUri } from '@/lib/paymentQr';
 import { CHAIN_NAMES } from '@/lib/assets';
-import { FeeBreakdown } from '@/components/ui/FeeBreakdown';
+import { FormGrid, SummaryPanel } from '@/components/order/SummaryPanel';
 import {
-  StepIndicator, ToolChip, StreamingText,
+  StepIndicator, ToolChip,
   AnimatedCounter, ParticleBurst, ShimmerText,
 } from '@/components/ui/motion';
 
@@ -431,7 +431,7 @@ export default function SellPage() {
   return (
     <div className="min-h-screen bg-base">
       <Navbar />
-      <div className="max-w-lg mx-auto px-4 py-10">
+      <div className="max-w-6xl mx-auto px-4 py-10">
 
         {/* Header */}
         <div className="mb-8">
@@ -462,7 +462,8 @@ export default function SellPage() {
 
         {/* ── ASSET ───────────────────────────────────────────────────────── */}
         {step === 'asset' && (
-          <div className="space-y-4 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <div className="space-y-4">
             <p className="text-gray-400 text-sm font-semibold">Pilih crypto yang ingin dijual</p>
             <div className="space-y-3">
               {(['SOL', 'ETH', 'BNB'] as Asset[]).map(a => {
@@ -516,11 +517,13 @@ export default function SellPage() {
               Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
             </button>
           </div>
+          </FormGrid>
         )}
 
         {/* ── AMOUNT ──────────────────────────────────────────────────────── */}
         {step === 'amount' && asset && (
-          <div className="space-y-5 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <div className="space-y-5">
             <button onClick={() => setStep('asset')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
 
             {/* Input mode toggle */}
@@ -590,35 +593,18 @@ export default function SellPage() {
               </p>
             )}
           </div>
+          </FormGrid>
         )}
 
         {/* ── BANK ────────────────────────────────────────────────────────── */}
         {step === 'bank' && quote && asset && (
-          <div className="space-y-5 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
+          <div className="space-y-5">
             <button onClick={() => setStep('amount')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
 
-            {/* Quote summary */}
-            <div className="bg-surface-1 border border-green-600/20 rounded-2xl p-4 space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">Anda kirim</span>
-                <span className={clsx('font-black text-lg', info?.color)}>{fmtC(quote.cryptoAmount)} {asset}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-500"><span>Rate</span><span>1 {asset} = {fmt(quote.exchangeRate)}</span></div>
-              <div className="flex justify-between text-xs text-gray-500"><span>Nilai kotor</span><span>{fmt(quote.idrAmount)}</span></div>
-              <FeeBreakdown
-                gross={quote.idrAmount}
-                serviceFee={quote.serviceFee}
-                serviceFeeRate={quote.serviceFeeRate}
-                networkFee={quote.networkFee}
-                networkFeeRate={quote.networkFeeRate}
-                tax={quote.tax ?? 0}
-                taxRate={quote.taxRate}
-                size="xs"
-              />
-              <div className="flex justify-between font-bold pt-1 border-t border-line-subtle">
-                <span className="text-white text-sm">Anda terima</span>
-                <span className="text-green-400 font-black text-xl">{fmt(quote.totalIdr)}</span>
-              </div>
+            {/* Mobile summary (panel desktop disembunyikan di mobile) */}
+            <div className="lg:hidden">
+              <SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />
             </div>
 
             {/* Bank form */}
@@ -664,36 +650,18 @@ export default function SellPage() {
               Review & Konfirmasi →
             </button>
           </div>
+          </FormGrid>
         )}
 
         {/* ── CONFIRM ─────────────────────────────────────────────────────── */}
         {step === 'confirm' && quote && asset && (
-          <div className="space-y-5 animate-fade-in">
+          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
+          <div className="space-y-5">
             <button onClick={() => setStep('bank')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
 
-            <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 space-y-3">
-              <p className="text-white font-bold text-sm">Ringkasan Order</p>
-              <div className="flex justify-between items-center pb-3 border-b border-line-subtle">
-                <span className="text-gray-400 text-sm">Anda kirim</span>
-                <span className={clsx('font-black text-lg', info?.color)}>{fmtC(quote.cryptoAmount)} {asset}</span>
-              </div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Rate</span><span className="text-gray-300">1 {asset} = {fmt(quote.exchangeRate)}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-gray-500">Nilai kotor</span><span className="text-gray-300">{fmt(quote.idrAmount)}</span></div>
-              <div className="py-2 border-t border-b border-line-subtle">
-                <FeeBreakdown
-                  gross={quote.idrAmount}
-                  serviceFee={quote.serviceFee}
-                  serviceFeeRate={quote.serviceFeeRate}
-                  networkFee={quote.networkFee}
-                  networkFeeRate={quote.networkFeeRate}
-                  tax={quote.tax ?? 0}
-                  taxRate={quote.taxRate}
-                />
-              </div>
-              <div className="flex justify-between items-center pt-1">
-                <span className="text-white font-bold text-sm">Anda terima (IDR)</span>
-                <span className="text-green-400 font-black text-xl">{fmt(quote.totalIdr)}</span>
-              </div>
+            {/* Mobile summary (panel desktop disembunyikan di mobile) */}
+            <div className="lg:hidden">
+              <SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />
             </div>
 
             <div className="bg-surface-1 border border-line-subtle rounded-xl p-4 space-y-1.5 text-sm">
@@ -703,27 +671,20 @@ export default function SellPage() {
               <div className="flex justify-between"><span className="text-gray-500">Nama</span><span className="text-white">{accountName}</span></div>
             </div>
 
-            {/* Quote countdown */}
-            <div className="flex items-center gap-2 text-sm">
-              <Clock className={`w-4 h-4 ${quoteRefreshing ? 'text-brand-400 animate-spin' : 'text-yellow-400'}`} />
-              {quoteRefreshing
-                ? <span className="text-brand-400">Memperbarui harga...</span>
-                : <span className={quoteExpiry < 15 ? 'text-red-400' : quoteExpiry < 30 ? 'text-yellow-400' : 'text-gray-400'}>
-                    Harga diperbarui dalam {quoteExpiry}s
-                  </span>
-              }
-            </div>
+            {/* Quote countdown tampil di panel ringkasan (desktop)
+                dan panel mobile di atas — tidak diduplikasi di sini. */}
 
             <button className="btn-primary w-full bg-green-600 hover:bg-green-500 text-base py-3.5"
               disabled={submitting || quoteRefreshing} onClick={createOrder}>
               {submitting ? <><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Membuat order...</> : 'Konfirmasi & Kirim Crypto →'}
             </button>
           </div>
+          </FormGrid>
         )}
 
         {/* ── SENDING ─────────────────────────────────────────────────────── */}
         {step === 'sending' && order && asset && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full">
 
             {/* Order summary bar */}
             <div className="bg-surface-1 border border-green-600/20 rounded-xl p-4 flex items-center justify-between">
@@ -880,7 +841,7 @@ export default function SellPage() {
 
         {/* ── WAITING (payout processing) ──────────────────────────────────── */}
         {step === 'waiting' && order && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full">
 
             {/* Crypto confirmed banner */}
             {depositStatus === 'confirmed' ? (
@@ -982,7 +943,7 @@ export default function SellPage() {
 
         {/* ── SUCCESS ─────────────────────────────────────────────────────── */}
         {step === 'success' && order && (
-          <div className="relative space-y-5 animate-fade-in">
+          <div className="relative space-y-5 animate-fade-in max-w-lg mx-auto w-full">
             <ParticleBurst />
             <div className="text-center">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
