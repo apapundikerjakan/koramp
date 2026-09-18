@@ -6,7 +6,11 @@ const isProd = process.env.NODE_ENV === 'production';
 //   <script> needed) — script-src stays 'self' (+ 'unsafe-eval' in dev only,
 //   required by Next dev; never in production) PLUS s3.tradingview.com for the
 //   official TradingView embed widgets (order-flow charts, no API key).
-// - frame-src allows www.tradingview.com (widget iframes). X-Frame-Options /
+// - frame-src allows the TradingView widget origins (verified against the
+//   actual embed loader source): widget iframes are served from
+//   https://www.tradingview-widget.com (NOT www.tradingview.com) with an
+//   s.tradingview.com CSP fallback — all three must be allowlisted or the
+//   chart iframe is blocked and renders an empty box. X-Frame-Options /
 //   frame-ancestors only restrict framing OUR pages elsewhere — unaffected.
 // - connect-src allows https+wss for WalletConnect relay + RPC endpoints.
 // - img-src allows data:/blob: (wallet icons, QR) + https (proxied QR fallback).
@@ -20,7 +24,7 @@ const cspDirectives = [
   "connect-src 'self' https: wss:",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "frame-src 'self' https://www.tradingview.com",
+  "frame-src 'self' https://www.tradingview.com https://www.tradingview-widget.com https://s.tradingview.com",
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",

@@ -17,9 +17,6 @@ import clsx from 'clsx';
 import { FeeBreakdown } from '@/components/ui/FeeBreakdown';
 import { TokenIcon, type TokenSymbol } from '@/components/ui/TokenIcon';
 import { ShimmerText } from '@/components/ui/motion';
-import { TradingViewMiniChart } from '@/components/ui/TradingViewMiniChart';
-import { TradingViewAdvancedModal } from '@/components/ui/TradingViewAdvancedChart';
-import { TV_DISCLAIMER } from '@/lib/tradingView';
 import { formatIDR, formatCrypto } from '@/lib/format';
 
 export type SummaryAsset = TokenSymbol;
@@ -166,18 +163,6 @@ export function SummaryPanel({
           </p>
         )}
 
-        {/* ── Live reference chart (TradingView embed, additive only) ──────
-            Placed below the rate/fee totals, above the trust list. Reactive:
-            follows the asset chosen in the form (no hardcoding). Skipped
-            until an asset is picked (widgets need a symbol). */}
-        {asset && (
-          <div className="pt-3 border-t border-line-subtle space-y-2">
-            <TradingViewMiniChart key={asset} symbol={asset} />
-            <p className="text-ink-muted text-[11px] leading-relaxed">{TV_DISCLAIMER}</p>
-            <TradingViewAdvancedModal symbol={asset} />
-          </div>
-        )}
-
         <ul className="pt-3 border-t border-line-subtle space-y-2">
           {TRUST.map((t) => (
             <li key={t} className="flex items-start gap-2 text-xs text-ink-secondary">
@@ -187,19 +172,6 @@ export function SummaryPanel({
           ))}
         </ul>
       </div>
-    </div>
-  );
-}
-
-/**
- * FormGrid — pembungkus dua kolom (form + aside sticky). Mobile: 1 kolom,
- * aside disembunyikan (halaman merender <SummaryPanel> inline via lg:hidden).
- */
-export function FormGrid({ aside, children }: { aside: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px] gap-8 items-start animate-fade-in">
-      <div className="max-w-lg w-full min-w-0">{children}</div>
-      <aside className="hidden lg:block sticky top-24">{aside}</aside>
     </div>
   );
 }

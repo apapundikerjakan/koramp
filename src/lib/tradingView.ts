@@ -19,3 +19,9 @@ export const TV_SYMBOLS: Record<AssetSymbol, string> = {
 
 export const TV_DISCLAIMER =
   'Grafik harga referensi global (USDT). Kurs IDR mengikuti rate live Kipramp di atas.';
+
+/** localStorage key for the terminal chart open/closed preference (client only). */
+export const CHART_OPEN_KEY = 'kipramp_chart_open';
+
+/** Chart symbol before the user picks an asset (no default asset in flow state). */
+export const DEFAULT_CHART_ASSET: AssetSymbol = 'ETH';

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { useWallet } from '@/contexts/WalletContext';
@@ -8,7 +9,9 @@ import { ArrowRight, AlertTriangle, Clock, CheckCircle2, RefreshCw, Copy, Info, 
 import { toast } from 'sonner';
 import clsx from 'clsx';
 import { CHAIN_NAMES, getTxExplorerUrl } from '@/lib/assets';
-import { FormGrid, SummaryPanel } from '@/components/order/SummaryPanel';
+import { SummaryPanel } from '@/components/order/SummaryPanel';
+import { TerminalGrid, ChartPanelSkeleton, ChartToggleButton, useChartToggle } from '@/components/order/TerminalLayout';
+import { DEFAULT_CHART_ASSET } from '@/lib/tradingView';
 import { TokenIcon } from '@/components/ui/TokenIcon';
 import {
   StepIndicator, QrFrame, ToolChip, StreamingText,
@@ -31,6 +34,12 @@ function fmtCrypto(n: string | number): string {
   return parseFloat(Number(n).toFixed(8)).toString();
 }
 
+// Trading-terminal chart — client-only (TradingView embed needs window/document).
+const TerminalChart = dynamic(
+  () => import('@/components/ui/TradingViewAdvancedChart').then((m) => ({ default: m.TradingViewTerminalChart })),
+  { ssr: false, loading: () => <ChartPanelSkeleton /> },
+);
+
 export default function TopUpPage() {
   const router = useRouter();
   const { address, evmAddress, evmChainId, solAddress, isConnected, setShowConnectModal, openEvmModal, isCorrectNetworkForAsset, ensureChainForAsset } = useWallet();
@@ -45,6 +54,10 @@ export default function TopUpPage() {
   const [submitting, setSubmitting] = useState(false);
   const [qrError, setQrError] = useState(false);
   const [quoteExpiry, setQuoteExpiry] = useState(0);
+
+  // Trading-terminal chart (left column) — preference persisted, mobile defaults closed.
+  const { chartOpen, toggleChart } = useChartToggle();
+  const isChartStep = step === 'asset' || step === 'amount' || step === 'confirm';
 
   const [quoteRefreshing, setQuoteRefreshing] = useState(false);
   const refreshingRef = useRef(false);
@@ -260,14 +273,17 @@ export default function TopUpPage() {
   return (
     <div className="min-h-screen bg-base">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 bg-brand-600/20 rounded-xl flex items-center justify-center">
-              <span className="text-brand-400 font-black">↑</span>
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-brand-600/20 rounded-xl flex items-center justify-center">
+                <span className="text-brand-400 font-black">↑</span>
+              </div>
+              <h1 className="text-2xl font-black text-white">Top Up Crypto</h1>
             </div>
-            <h1 className="text-2xl font-black text-white">Top Up Crypto</h1>
+            {isChartStep && <ChartToggleButton open={chartOpen} onToggle={toggleChart} />}
           </div>
           <p className="text-gray-500 text-sm pl-12">IDR → Crypto. Bayar dengan <span className="text-brand-400 font-semibold">QRIS</span> — GoPay, OVO, ShopeePay, m-banking.</p>
         </div>
@@ -287,7 +303,7 @@ export default function TopUpPage() {
 
         {/* ── STEP: ASSET ─────────────────────────────────────── */}
         {step === 'asset' && (
-          <FormGrid aside={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={null} />}>
           <div className="space-y-4">
             <p className="text-gray-400 text-sm font-semibold">Pilih crypto yang ingin dibeli</p>
             <div className="space-y-3">
@@ -359,12 +375,12 @@ export default function TopUpPage() {
               Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
             </button>
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── STEP: AMOUNT ─────────────────────────────────── */}
         {step === 'amount' && asset && (
-          <FormGrid aside={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={null} />}>
           <div className="space-y-5">
             <button onClick={() => setStep('asset')} className="text-gray-500 hover:text-white text-sm flex items-center gap-1">← Kembali</button>
 
@@ -412,19 +428,14 @@ export default function TopUpPage() {
               </p>
             )}
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── STEP: CONFIRM ────────────────────────────────── */}
         {step === 'confirm' && quote && asset && (
-          <FormGrid aside={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
           <div className="space-y-5">
             <button onClick={() => setStep('amount')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
-
-            {/* Mobile summary (panel desktop disembunyikan di mobile) */}
-            <div className="lg:hidden">
-              <SummaryPanel variant="topup" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />
-            </div>
 
             {/* Anda bayar — ringkas, rincian penuh ada di panel */}
             <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 flex justify-between items-center">
@@ -448,15 +459,15 @@ export default function TopUpPage() {
               <p className="text-white font-mono text-sm break-all">{resolvedAddress}</p>
             </div>
 
-            {/* Quote expiry countdown tampil di panel ringkasan (desktop)
-                dan panel mobile di atas — tidak diduplikasi di sini. */}
+            {/* Quote expiry countdown tampil di panel Ringkasan di bawah —
+                tidak diduplikasi di sini. */}
 
             <button className="btn-primary w-full text-base py-3.5" disabled={submitting || quoteRefreshing || quoteExpiry === 0}
               onClick={createOrder}>
               {submitting ? <><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Membuat order...</> : quoteExpiry === 0 ? 'Memperbarui harga...' : `Bayar ${fmt(quote.totalIdr)} →`}
             </button>
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── STEP: PAYMENT ────────────────────────────────── */}

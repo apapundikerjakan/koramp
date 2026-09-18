@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { useWallet } from '@/contexts/WalletContext';
@@ -13,7 +14,9 @@ import { toast } from 'sonner';
 import clsx from 'clsx';
 import { buildPaymentUri } from '@/lib/paymentQr';
 import { CHAIN_NAMES } from '@/lib/assets';
-import { FormGrid, SummaryPanel } from '@/components/order/SummaryPanel';
+import { SummaryPanel } from '@/components/order/SummaryPanel';
+import { TerminalGrid, ChartPanelSkeleton, ChartToggleButton, useChartToggle } from '@/components/order/TerminalLayout';
+import { DEFAULT_CHART_ASSET } from '@/lib/tradingView';
 import { TokenIcon } from '@/components/ui/TokenIcon';
 import {
   StepIndicator, ToolChip,
@@ -44,6 +47,12 @@ function fmt(n: string | number) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(n));
 }
 function fmtC(n: string | number) { return parseFloat(Number(n).toFixed(8)).toString(); }
+
+// Trading-terminal chart — client-only (TradingView embed needs window/document).
+const TerminalChart = dynamic(
+  () => import('@/components/ui/TradingViewAdvancedChart').then((m) => ({ default: m.TradingViewTerminalChart })),
+  { ssr: false, loading: () => <ChartPanelSkeleton /> },
+);
 
 // ─── QR Code component ───────────────────────────────────────────────────────
 // Self-hosted canvas renderer — no financial data sent to third parties.
@@ -90,6 +99,10 @@ export default function SellPage() {
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteExpiry, setQuoteExpiry] = useState(0);
   const [quoteRefreshing, setQuoteRefreshing] = useState(false);
+
+  // Trading-terminal chart (left column) — preference persisted, mobile defaults closed.
+  const { chartOpen, toggleChart } = useChartToggle();
+  const isChartStep = step === 'asset' || step === 'amount' || step === 'bank' || step === 'confirm';
   const [order, setOrder] = useState<any>(null);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -432,15 +445,18 @@ export default function SellPage() {
   return (
     <div className="min-h-screen bg-base">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
 
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-9 h-9 bg-green-600/20 rounded-xl flex items-center justify-center">
-              <ArrowDownToLine className="w-5 h-5 text-green-400" />
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 bg-green-600/20 rounded-xl flex items-center justify-center">
+                <ArrowDownToLine className="w-5 h-5 text-green-400" />
+              </div>
+              <h1 className="text-2xl font-black text-white">Sell Crypto</h1>
             </div>
-            <h1 className="text-2xl font-black text-white">Sell Crypto</h1>
+            {isChartStep && <ChartToggleButton open={chartOpen} onToggle={toggleChart} />}
           </div>
           <p className="text-gray-500 text-sm pl-12">Crypto → IDR. Terima pembayaran ke rekening bank.</p>
         </div>
@@ -463,7 +479,7 @@ export default function SellPage() {
 
         {/* ── ASSET ───────────────────────────────────────────────────────── */}
         {step === 'asset' && (
-          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={null} />}>
           <div className="space-y-4">
             <p className="text-gray-400 text-sm font-semibold">Pilih crypto yang ingin dijual</p>
             <div className="space-y-3">
@@ -518,12 +534,12 @@ export default function SellPage() {
               Lanjut <ArrowRight className="w-4 h-4 inline ml-1" />
             </button>
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── AMOUNT ──────────────────────────────────────────────────────── */}
         {step === 'amount' && asset && (
-          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={null} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={null} />}>
           <div className="space-y-5">
             <button onClick={() => setStep('asset')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
 
@@ -594,19 +610,14 @@ export default function SellPage() {
               </p>
             )}
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── BANK ────────────────────────────────────────────────────────── */}
         {step === 'bank' && quote && asset && (
-          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
           <div className="space-y-5">
             <button onClick={() => setStep('amount')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
-
-            {/* Mobile summary (panel desktop disembunyikan di mobile) */}
-            <div className="lg:hidden">
-              <SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />
-            </div>
 
             {/* Bank form */}
             <div className="space-y-4">
@@ -651,19 +662,14 @@ export default function SellPage() {
               Review & Konfirmasi →
             </button>
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── CONFIRM ─────────────────────────────────────────────────────── */}
         {step === 'confirm' && quote && asset && (
-          <FormGrid aside={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
+          <TerminalGrid open={chartOpen} chart={<TerminalChart symbol={asset ?? DEFAULT_CHART_ASSET} />} summary={<SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />}>
           <div className="space-y-5">
             <button onClick={() => setStep('bank')} className="text-gray-500 hover:text-white text-sm">← Kembali</button>
-
-            {/* Mobile summary (panel desktop disembunyikan di mobile) */}
-            <div className="lg:hidden">
-              <SummaryPanel variant="sell" asset={asset} networkLabel={info?.network} quote={quote} quoteExpiry={quoteExpiry} quoteRefreshing={quoteRefreshing} />
-            </div>
 
             <div className="bg-surface-1 border border-line-subtle rounded-xl p-4 space-y-1.5 text-sm">
               <p className="text-gray-400 font-semibold mb-2">Rekening Tujuan IDR</p>
@@ -672,15 +678,15 @@ export default function SellPage() {
               <div className="flex justify-between"><span className="text-gray-500">Nama</span><span className="text-white">{accountName}</span></div>
             </div>
 
-            {/* Quote countdown tampil di panel ringkasan (desktop)
-                dan panel mobile di atas — tidak diduplikasi di sini. */}
+            {/* Quote countdown tampil di panel Ringkasan di bawah —
+                tidak diduplikasi di sini. */}
 
             <button className="btn-primary w-full bg-green-600 hover:bg-green-500 text-base py-3.5"
               disabled={submitting || quoteRefreshing} onClick={createOrder}>
               {submitting ? <><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Membuat order...</> : 'Konfirmasi & Kirim Crypto →'}
             </button>
           </div>
-          </FormGrid>
+          </TerminalGrid>
         )}
 
         {/* ── SENDING ─────────────────────────────────────────────────────── */}
