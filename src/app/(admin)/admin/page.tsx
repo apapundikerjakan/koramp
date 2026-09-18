@@ -8,6 +8,7 @@ import {
   LogOut, RefreshCw, Wallet, AlertTriangle, TrendingUp, Key,
 } from 'lucide-react';
 import { RestrictedNotice } from '@/components/admin/AdminGate';
+import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -173,6 +174,9 @@ export default function AdminPage() {
             </div>
           </section>
         )}
+
+        {/* ── Analytics (time-series) ────────────────────────────────────── */}
+        <AnalyticsCharts />
 
         {/* ── Platform Wallet Balances ──────────────────────────────────────── */}
         <section>

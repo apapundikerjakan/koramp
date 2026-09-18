@@ -406,6 +406,21 @@ model IpBan {
   @@index([expiresAt])
 }
 
+// ─── WEB ANALYTICS (privacy-preserving page views) ──────────────────────────
+// No IP / user-agent / fingerprint — path + UTC day only. One row per
+// (path, day) with a counter, so traffic never creates unbounded rows.
+
+model PageVisit {
+  id        String   @id @default(uuid())
+  path      String
+  day       DateTime // UTC midnight — daily aggregation bucket
+  count     Int      @default(1)
+  createdAt DateTime @default(now())
+
+  @@unique([path, day])
+  @@index([day])
+}
+
 // ─── ADMIN ACCESS KEY (SEPARATE FROM CUSTOMER FLOW) ────────────────────────
 // Single credential system — no email, no password, no role hierarchy.
 // Admin Access Key = 64-char hex, stored only as SHA-256 verifier.

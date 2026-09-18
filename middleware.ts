@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 /**
  * Admin sliding session refresh (P17 — 10-min idle timeout)
- * + Active Defense edge gates (body-size + IP quarantine).
+ * + Active Defense edge gates (body-size + IP quarantine)
+ * + Privacy-preserving page-visit beacon (analytics, no PII).
  *
  * - Verifies admin JWT on /api/admin/* (except login) and /admin pages.
  * - On valid session, re-issues fresh 10-min cookie so active users slide,
@@ -10,14 +11,59 @@ import { NextResponse, type NextRequest } from 'next/server';
  * - Verification is lightweight (JWT verify only); full DB checks stay in requireAdmin.
  * - Rejects oversized API bodies early (413) and quarantined IPs on the admin
  *   surface with a generic message (403) — never exposes rules/counts.
+ * - Counts public page navigations via fire-and-forget POST to /api/visits
+ *   (path + day only — never IP/UA; Prisma stays out of edge runtime).
  */
 function maxBodyBytes(): number {
   const v = Number(process.env.MAX_REQUEST_BODY_SIZE ?? 1048576); // 1MB default
   return Number.isFinite(v) && v > 0 ? v : 1048576;
 }
 
+// Public pages counted by the visit beacon (mirrors /api/visits allowlist).
+function visitPath(path: string): string | null {
+  if (path === '/' || path === '/topup' || path === '/sell') return path;
+  if (path.startsWith('/order/') && /^\/order\/[A-Za-z0-9_-]{1,100}$/.test(path)) return path;
+  return null;
+}
+
+function viewerIp(req: NextRequest): string {
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first && /^[0-9a-fA-F.:]{3,45}$/.test(first)) return first;
+  }
+  const real = req.headers.get('x-real-ip')?.trim();
+  if (real && /^[0-9a-fA-F.:]{3,45}$/.test(real)) return real;
+  return 'unknown';
+}
+
+// Edge-safe beacon: Prisma can't run here, so the Node-side /api/visits
+// route does the upsert. Awaited with a short timeout so counts aren't lost
+// when the runtime freezes, but never allowed to break the page.
+async function beaconVisit(req: NextRequest, path: string): Promise<void> {
+  try {
+    await fetch(new URL('/api/visits', req.nextUrl.origin), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-visit-ip': viewerIp(req) },
+      body: JSON.stringify({ path }),
+      signal: AbortSignal.timeout(2000),
+    });
+  } catch {
+    // Analytics must never break pages.
+  }
+}
+
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
+
+  // Visit beacon for public page navigations (GET only, skip prefetches).
+  // RSC navigations ARE real views (one per client-side navigation);
+  // prefetches (hover) are not.
+  const vp = visitPath(path);
+  if (vp && req.method === 'GET' && !req.headers.has('next-router-prefetch')) {
+    await beaconVisit(req, vp);
+  }
+
   const isAdminApi = path.startsWith('/api/admin/');
   const isAdminPage = path.startsWith('/admin');
   if (!isAdminApi && !isAdminPage) return NextResponse.next();
@@ -108,5 +154,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/', '/topup', '/sell', '/order/:path*'],
 };
