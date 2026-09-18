@@ -42,7 +42,10 @@ const nextConfig = {
   },
 
   experimental: {
-    // Required: keeps Prisma/bcrypt native code out of the server bundle trace.
+    // Required: enables src/instrumentation.ts (network/cluster validation
+    // at boot — previously dead: file sat at project root where Next never
+    // discovers it, and this flag was missing).
+    instrumentationHook: true,
     // @solana/web3.js + ethers are ESM-heavy; marking external avoids
     // bundling them into route handlers unnecessarily (P6 — kept, not obsolete).
     serverComponentsExternalPackages: [

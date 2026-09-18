@@ -41,16 +41,24 @@ function viewerIp(req: NextRequest): string {
 // Edge-safe beacon: Prisma can't run here, so the Node-side /api/visits
 // route does the upsert. Awaited with a short timeout so counts aren't lost
 // when the runtime freezes, but never allowed to break the page.
+// NOTE: uses AbortController+setTimeout (NOT AbortSignal.timeout) — the
+// static helper is missing in some edge runtimes and would silently kill
+// every beacon via the catch below.
 async function beaconVisit(req: NextRequest, path: string): Promise<void> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 2000);
   try {
-    await fetch(new URL('/api/visits', req.nextUrl.origin), {
+    const res = await fetch(new URL('/api/visits', req.nextUrl.origin), {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-visit-ip': viewerIp(req) },
       body: JSON.stringify({ path }),
-      signal: AbortSignal.timeout(2000),
+      signal: ctrl.signal,
     });
+    void res;
   } catch {
     // Analytics must never break pages.
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -60,6 +68,7 @@ export async function middleware(req: NextRequest) {
   // Visit beacon for public page navigations (GET only, skip prefetches).
   // RSC navigations ARE real views (one per client-side navigation);
   // prefetches (hover) are not.
+  // NOTE: keep in sync with /api/visits allowlist.
   const vp = visitPath(path);
   if (vp && req.method === 'GET' && !req.headers.has('next-router-prefetch')) {
     await beaconVisit(req, vp);

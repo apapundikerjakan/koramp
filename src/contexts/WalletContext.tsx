@@ -101,9 +101,62 @@ export interface KiprampWalletState {
 
 const WalletCtx = createContext<KiprampWalletState | null>(null);
 
+/**
+ * SSR-tolerant disconnected defaults.
+ *
+ * Public pages SSR-prerender without the wallet graph mounted (the providers
+ * boundary is client-only — see (public)/layout). Returning defaults instead
+ * of throwing keeps SSR shells renderable; the client hydrates with live
+ * state immediately after. Misuse outside any provider is still surfaced
+ * via a dev-only browser warning.
+ */
+const DISCONNECTED_WALLET: KiprampWalletState = {
+  status: 'disconnected',
+  isConnected: false,
+  isConnecting: false,
+  evmConnected: false,
+  evmAddress: null,
+  evmChainId: null,
+  evmWalletName: null,
+  evmWrongNetwork: false,
+  solConnected: false,
+  solAddress: null,
+  solWalletName: null,
+  address: null,
+  ecosystem: null,
+  network: null,
+  chainId: null,
+  walletName: null,
+  walletType: null,
+  openEvmModal: () => {},
+  showConnectModal: false,
+  setShowConnectModal: () => {},
+  error: null,
+  setError: () => {},
+  connectEvm: () => {},
+  disconnectEvm: () => {},
+  disconnectSol: async () => {},
+  disconnect: async () => {},
+  switchToChain: async () => false,
+  ensureChainForAsset: async () => false,
+  sendCrypto: async () => {
+    throw new Error('Wallet belum terhubung. Hubungkan wallet dulu.');
+  },
+  isCorrectNetworkForAsset: () => false,
+  getRequiredNetworkName: () => '',
+  getRequiredChainId: () => null,
+  shortAddress: () => '',
+};
+
 export function useWallet(): KiprampWalletState {
   const ctx = useContext(WalletCtx);
-  if (!ctx) throw new Error('useWallet must be inside WalletProvider');
+  if (!ctx) {
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('[wallet] useWallet outside WalletProvider — disconnected defaults (SSR shell?)');
+    }
+    return DISCONNECTED_WALLET;
+  }
   return ctx;
 }
 
