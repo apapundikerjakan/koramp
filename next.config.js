@@ -1,21 +1,26 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === 'production';
 
-// Content-Security-Policy tuned for KIPRAMP's wallet stack:
+// Content-Security-Policy tuned for KIPRAMP's wallet stack + TradingView embeds:
 // - RainbowKit/WalletConnect/Solana adapters are fully bundled (no external
 //   <script> needed) — script-src stays 'self' (+ 'unsafe-eval' in dev only,
-//   required by Next dev; never in production).
+//   required by Next dev; never in production) PLUS s3.tradingview.com for the
+//   official TradingView embed widgets (order-flow charts, no API key).
+// - frame-src allows www.tradingview.com (widget iframes). X-Frame-Options /
+//   frame-ancestors only restrict framing OUR pages elsewhere — unaffected.
 // - connect-src allows https+wss for WalletConnect relay + RPC endpoints.
 // - img-src allows data:/blob: (wallet icons, QR) + https (proxied QR fallback).
 // - style-src 'unsafe-inline' required by RainbowKit/emotion-style injection.
 const cspDirectives = [
   "default-src 'self'",
-  isProd ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  isProd
+    ? "script-src 'self' 'unsafe-inline' https://s3.tradingview.com"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://s3.tradingview.com",
   "style-src 'self' 'unsafe-inline'",
   "connect-src 'self' https: wss:",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
-  "frame-src 'self'",
+  "frame-src 'self' https://www.tradingview.com",
   "object-src 'none'",
   "base-uri 'self'",
   "frame-ancestors 'none'",

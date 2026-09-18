@@ -17,6 +17,9 @@ import clsx from 'clsx';
 import { FeeBreakdown } from '@/components/ui/FeeBreakdown';
 import { TokenIcon, type TokenSymbol } from '@/components/ui/TokenIcon';
 import { ShimmerText } from '@/components/ui/motion';
+import { TradingViewMiniChart } from '@/components/ui/TradingViewMiniChart';
+import { TradingViewAdvancedModal } from '@/components/ui/TradingViewAdvancedChart';
+import { TV_DISCLAIMER } from '@/lib/tradingView';
 import { formatIDR, formatCrypto } from '@/lib/format';
 
 export type SummaryAsset = TokenSymbol;
@@ -161,6 +164,18 @@ export function SummaryPanel({
           <p className="text-ink-muted text-sm leading-relaxed">
             Pilih aset dulu — ringkasan kurs dan biaya akan muncul di sini.
           </p>
+        )}
+
+        {/* ── Live reference chart (TradingView embed, additive only) ──────
+            Placed below the rate/fee totals, above the trust list. Reactive:
+            follows the asset chosen in the form (no hardcoding). Skipped
+            until an asset is picked (widgets need a symbol). */}
+        {asset && (
+          <div className="pt-3 border-t border-line-subtle space-y-2">
+            <TradingViewMiniChart key={asset} symbol={asset} />
+            <p className="text-ink-muted text-[11px] leading-relaxed">{TV_DISCLAIMER}</p>
+            <TradingViewAdvancedModal symbol={asset} />
+          </div>
         )}
 
         <ul className="pt-3 border-t border-line-subtle space-y-2">
