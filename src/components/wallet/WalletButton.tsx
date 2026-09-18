@@ -5,17 +5,29 @@
  *
  * EVM side:    RainbowKit <ConnectButton> — default popup, native account modal,
  *              chain switching, all built-in RainbowKit UX.
+ *              Lazy-loaded with next/dynamic (ssr:false) to prevent SSR mismatch.
  * Solana side: Custom pill (Phantom/Solflare/Backpack) with address + dropdown.
- *
- * When neither is connected, RainbowKit ConnectButton renders "Connect Wallet"
- * for EVM. A separate "+ SOL" pill lets the user also add a Solana wallet.
  */
 
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useWallet } from '@/contexts/WalletContext';
-import { ChevronDown, Copy, LogOut, CheckCircle2, Plus } from 'lucide-react';
+import { ChevronDown, Copy, LogOut, CheckCircle2, Plus, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
+
+// Lazy-load ConnectButton — RainbowKit uses browser APIs not available on SSR.
+const ConnectButton = dynamic(
+  () => import('@rainbow-me/rainbowkit').then((m) => m.ConnectButton),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center gap-2 px-4 py-2 bg-brand-600 rounded-xl text-sm text-white/70">
+        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+        <span className="hidden sm:inline">Wallet</span>
+      </div>
+    ),
+  },
+);
 
 function short(addr: string): string {
   return addr.length <= 12 ? addr : `${addr.slice(0, 5)}...${addr.slice(-4)}`;
@@ -41,7 +53,7 @@ export function WalletButton() {
   return (
     <div className="flex items-center gap-2">
 
-      {/* ── EVM: RainbowKit ConnectButton (default UI) ─────────────────────── */}
+      {/* ── EVM: RainbowKit ConnectButton (default UI, SSR-safe) ───────────── */}
       <ConnectButton
         chainStatus="icon"
         showBalance={false}
@@ -95,7 +107,7 @@ export function WalletButton() {
           )}
         </div>
       ) : (
-        /* Show "+ SOL" pill to add Solana wallet alongside EVM */
+        /* "+ SOL" pill to add Solana wallet alongside EVM */
         <button
           onClick={() => setShowConnectModal(true)}
           title="Tambah Solana wallet"
