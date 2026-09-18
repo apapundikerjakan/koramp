@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { RestrictedNotice } from '@/components/admin/AdminGate';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,6 @@ interface KeyStatus {
 }
 
 const ASSETS = ['SOL', 'ETH', 'BNB'] as const;
-const ASSET_ICONS: Record<string, string>  = { SOL: '◎', ETH: 'Ξ', BNB: '⬡' };
 const ASSET_COLORS: Record<string, string> = {
   SOL: 'text-purple-400', ETH: 'text-blue-400', BNB: 'text-yellow-400',
 };
@@ -333,7 +333,7 @@ export default function AdminSettingsPage() {
                 <div key={asset} className="bg-surface-2 border border-line rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className={`text-lg font-black ${ASSET_COLORS[asset]}`}>{ASSET_ICONS[asset]}</span>
+                      <TokenIcon symbol={asset} size={18} />
                       <span className={`font-bold ${ASSET_COLORS[asset]}`}>{asset}</span>
                     </div>
                     {info && <span className={`text-xs font-medium ${srcColor}`}>{info.source} · {info.ageSeconds}s</span>}
@@ -396,7 +396,7 @@ export default function AdminSettingsPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   {(['SOL', 'ETH', 'BNB'] as const).map(a => (
                     <div key={a} className={`p-3 rounded-lg bg-surface-2 border ${a === 'SOL' ? 'border-purple-500/20' : 'border-line'}`}>
-                      <p className={`font-bold mb-1 ${ASSET_COLORS[a]}`}>{ASSET_ICONS[a]} {a}</p>
+                      <p className={`font-bold mb-1 ${ASSET_COLORS[a]}`}><span className="inline-flex align-[-2px] mr-1"><TokenIcon symbol={a} size={14} /></span>{a}</p>
                       <p className="text-gray-500">Service: <span className="text-white">{pct(fee.serviceFeeRate)}</span></p>
                       <p className="text-gray-500">Tax: <span className="text-white">{pct(fee.taxRate)}</span></p>
                       <p className="text-gray-500">Network: <span className="text-white">{pct(fee.networkFeeRate)}</span></p>

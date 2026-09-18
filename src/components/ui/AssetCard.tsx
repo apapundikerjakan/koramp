@@ -2,16 +2,16 @@
 
 import clsx from 'clsx';
 import { BeamBorder, TiltCard } from './motion';
+import { TokenIcon } from './TokenIcon';
 
 export type Asset = 'SOL' | 'ETH' | 'BNB';
 
-const ASSET_INFO: Record<Asset, { name: string; network: string; color: string; bg: string; icon: string; glow: string; beam: 'sol' | 'eth' | 'bnb' }> = {
+const ASSET_INFO: Record<Asset, { name: string; network: string; color: string; bg: string; glow: string; beam: 'sol' | 'eth' | 'bnb' }> = {
   SOL: {
     name: 'Solana',
     network: 'Solana Network',
     color: 'text-purple-400',
     bg: 'bg-purple-500/10 border-purple-500/20',
-    icon: '◎',
     glow: 'glow-sol',
     beam: 'sol',
   },
@@ -20,7 +20,6 @@ const ASSET_INFO: Record<Asset, { name: string; network: string; color: string; 
     network: 'Base Network',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10 border-blue-500/20',
-    icon: 'Ξ',
     glow: 'glow-eth',
     beam: 'eth',
   },
@@ -29,7 +28,6 @@ const ASSET_INFO: Record<Asset, { name: string; network: string; color: string; 
     network: 'BNB Smart Chain',
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/10 border-yellow-500/20',
-    icon: '⬡',
     glow: 'glow-bnb',
     beam: 'bnb',
   },
@@ -64,14 +62,12 @@ export function AssetCard({ asset, selected, onClick }: AssetCardProps) {
     >
       <div
         className={clsx(
-          'w-12 h-12 rounded-xl border flex items-center justify-center text-xl font-bold',
+          'w-12 h-12 rounded-xl border flex items-center justify-center',
           info.bg,
-          info.color,
           selected && 'animate-pulse-soft',
         )}
-        aria-hidden
       >
-        {info.icon}
+        <TokenIcon symbol={asset} size={26} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { QrCode } from 'lucide-react';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 
 export function Footer() {
   return (
@@ -33,9 +34,9 @@ export function Footer() {
           <div>
             <p className="text-gray-400 font-semibold text-sm mb-3">Aset yang Didukung</p>
             <div className="space-y-2 text-sm text-gray-500">
-              <p>◎ SOL — Solana Network</p>
-              <p>Ξ ETH — Base Network</p>
-              <p>⬡ BNB — BNB Smart Chain</p>
+              <p className="flex items-center gap-1.5"><TokenIcon symbol="SOL" size={14} /> SOL — Solana Network</p>
+              <p className="flex items-center gap-1.5"><TokenIcon symbol="ETH" size={14} /> ETH — Base Network</p>
+              <p className="flex items-center gap-1.5"><TokenIcon symbol="BNB" size={14} /> BNB — BNB Smart Chain</p>
             </div>
           </div>
         </div>

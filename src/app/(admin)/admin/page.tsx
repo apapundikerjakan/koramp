@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { RestrictedNotice } from '@/components/admin/AdminGate';
 import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,10 +51,10 @@ function fmtCrypto(n: string | number, decimals = 6) {
   return parseFloat(Number(n).toFixed(decimals)).toString();
 }
 
-const ASSET_META: Record<string, { icon: string; color: string; bg: string; border: string }> = {
-  SOL: { icon: '◎', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  ETH: { icon: 'Ξ',  color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20'   },
-  BNB: { icon: '⬡', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
+const ASSET_META: Record<string, { color: string; bg: string; border: string }> = {
+  SOL: { color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+  ETH: { color: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/20'   },
+  BNB: { color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' },
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -208,7 +209,8 @@ export default function AdminPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {walletData?.wallets.map(w => {
-              const meta = ASSET_META[w.asset] ?? { icon: '●', color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' };
+              const meta = ASSET_META[w.asset] ?? { color: 'text-gray-400', bg: 'bg-gray-500/10', border: 'border-gray-500/20' };
+              const known = w.asset === 'SOL' || w.asset === 'ETH' || w.asset === 'BNB';
               return (
                 <div key={w.asset} className={`bg-surface-2 border rounded-xl p-5 ${
                   w.status === 'ok' ? 'border-line' :
@@ -217,8 +219,8 @@ export default function AdminPage() {
                   {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <div className={`w-9 h-9 rounded-xl ${meta.bg} border ${meta.border} flex items-center justify-center text-lg font-black ${meta.color}`}>
-                        {meta.icon}
+                      <div className={`w-9 h-9 rounded-xl ${meta.bg} border ${meta.border} flex items-center justify-center`}>
+                        {known ? <TokenIcon symbol={w.asset} size={20} /> : <span className="text-gray-400 text-lg">●</span>}
                       </div>
                       <div>
                         <p className={`font-bold text-sm ${meta.color}`}>{w.asset}</p>

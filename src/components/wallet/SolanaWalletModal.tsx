@@ -14,6 +14,7 @@ import { WalletReadyState } from '@solana/wallet-adapter-base';
 import { useWallet } from '@/contexts/WalletContext';
 import { X, CheckCircle2, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 
 const INSTALL_URLS: Record<string, string> = {
   Phantom:  'https://phantom.app/',
@@ -58,7 +59,7 @@ export function SolanaWalletModal() {
     const detected = found
       ? found.readyState === WalletReadyState.Installed || found.readyState === WalletReadyState.Loadable
       : false;
-    return { name, icon: ICONS[name] ?? '◎', detected };
+    return { name, icon: ICONS[name] ?? '●', detected };
   });
 
   return (
@@ -72,8 +73,8 @@ export function SolanaWalletModal() {
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-line">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-purple-600/20 rounded-xl flex items-center justify-center text-xl">
-              ◎
+            <div className="w-9 h-9 bg-purple-600/20 rounded-xl flex items-center justify-center">
+              <TokenIcon symbol="SOL" size={20} />
             </div>
             <div>
               <h2 className="text-white font-bold text-base leading-tight">Solana Wallet</h2>

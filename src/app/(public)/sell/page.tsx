@@ -14,6 +14,7 @@ import clsx from 'clsx';
 import { buildPaymentUri } from '@/lib/paymentQr';
 import { CHAIN_NAMES } from '@/lib/assets';
 import { FormGrid, SummaryPanel } from '@/components/order/SummaryPanel';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 import {
   StepIndicator, ToolChip,
   AnimatedCounter, ParticleBurst, ShimmerText,
@@ -29,9 +30,9 @@ type InputMode = 'idr' | 'crypto'; // what the user types
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const ASSET_INFO = {
-  SOL: { icon: '◎', color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500/10', network: 'Solana Network', networkId: 'SOLANA', walletType: 'SOLANA' },
-  ETH: { icon: 'Ξ',  color: 'text-blue-400',   border: 'border-blue-500/30',   bg: 'bg-blue-500/10',   network: 'Base Sepolia',   networkId: 'BASE',   walletType: 'EVM'    },
-  BNB: { icon: '⬡', color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10', network: 'BSC Testnet', networkId: 'BSC',  walletType: 'EVM'    },
+  SOL: { color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500/10', network: 'Solana Network', networkId: 'SOLANA', walletType: 'SOLANA' },
+  ETH: { color: 'text-blue-400',   border: 'border-blue-500/30',   bg: 'bg-blue-500/10',   network: 'Base Sepolia',   networkId: 'BASE',   walletType: 'EVM'    },
+  BNB: { color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10', network: 'BSC Testnet', networkId: 'BSC',  walletType: 'EVM'    },
 } as const;
 
 const POPULAR_BANKS = ['BCA', 'BRI', 'BNI', 'Mandiri', 'CIMB Niaga', 'BSI', 'Permata', 'BTN'];
@@ -476,7 +477,7 @@ export default function SellPage() {
                       glow,
                       asset === a ? 'selected border-green-500 bg-green-600/10 glass' : 'border-line-subtle hover:bg-surface-2',
                     )}>
-                    <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center text-2xl font-black', ai.bg, ai.border, ai.color)}>{ai.icon}</div>
+                    <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center', ai.bg, ai.border)}><TokenIcon symbol={a} size={26} /></div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className={clsx('font-bold', ai.color)}>{a}</span>

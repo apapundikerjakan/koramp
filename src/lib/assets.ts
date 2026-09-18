@@ -11,7 +11,7 @@ export type WalletEcosystem = 'EVM' | 'SOLANA';
 export interface AssetConfig {
   symbol: AssetSymbol;
   name: string;
-  icon: string;
+  // NOTE: token marks render via <TokenIcon> (official SVGs) — no glyph strings here.
   networkName: string;
   networkId: NetworkId;
   chainId: number | null;
@@ -27,7 +27,6 @@ export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
   SOL: {
     symbol: 'SOL',
     name: 'Solana',
-    icon: '◎',
     networkName: 'Solana Devnet',
     networkId: 'SOLANA',
     chainId: null,
@@ -41,7 +40,6 @@ export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
   ETH: {
     symbol: 'ETH',
     name: 'Ethereum (Base Sepolia)',
-    icon: 'Ξ',
     networkName: 'Base Sepolia (Testnet)',
     networkId: 'BASE',
     chainId: 84532,           // Base Sepolia
@@ -55,7 +53,6 @@ export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
   BNB: {
     symbol: 'BNB',
     name: 'BNB (BSC Testnet)',
-    icon: '⬡',
     networkName: 'BSC Testnet',
     networkId: 'BSC',
     chainId: 97,              // BSC Testnet

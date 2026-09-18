@@ -5,14 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { CheckCircle2, RefreshCw, ExternalLink, AlertTriangle, ArrowLeft } from 'lucide-react';
 import { TaskRow, CopyButton, StreamingText, ShimmerText } from '@/components/ui/motion';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 import { getTxExplorerUrl } from '@/lib/assets';
 import clsx from 'clsx';
 
 const ASSET_COLOR: Record<string, string> = {
   SOL: 'text-purple-400', ETH: 'text-blue-400', BNB: 'text-yellow-400',
-};
-const ASSET_ICON: Record<string, string> = {
-  SOL: '◎', ETH: 'Ξ', BNB: '⬡',
 };
 const EXPLORER: Record<string, string> = {
   // Testnet explorer URLs — TX hash appended directly after the base path.
@@ -272,7 +270,6 @@ export default function OrderStatusPage() {
   const isFailed = FAILED_STATUSES.includes(order.status);
   const isCompleted = order.status === 'COMPLETED';
   const assetColor = ASSET_COLOR[order.asset] ?? 'text-gray-300';
-  const assetIcon = ASSET_ICON[order.asset] ?? '';
   const explorerUrl = order.cryptoTxHash && order.network
     ? buildExplorerUrl(order.network, order.cryptoTxHash)
     : null;
@@ -290,7 +287,7 @@ export default function OrderStatusPage() {
         <div className="flex items-start justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className={clsx('text-2xl font-black', assetColor)}>{assetIcon}</span>
+              <TokenIcon symbol={order.asset} size={26} />
               <h1 className="text-xl font-black text-white">
                 {isTopUp ? 'Top Up' : 'Sell'} {order.asset}
               </h1>

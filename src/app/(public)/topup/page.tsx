@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import clsx from 'clsx';
 import { CHAIN_NAMES, getTxExplorerUrl } from '@/lib/assets';
 import { FormGrid, SummaryPanel } from '@/components/order/SummaryPanel';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 import {
   StepIndicator, QrFrame, ToolChip, StreamingText,
   AnimatedCounter, ParticleBurst, ShimmerText,
@@ -18,9 +19,9 @@ type Asset = 'SOL' | 'ETH' | 'BNB';
 type Step = 'connect' | 'asset' | 'amount' | 'confirm' | 'payment' | 'success';
 
 const ASSET_INFO = {
-  SOL: { icon: '◎', color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500/10', network: 'Solana Network', networkId: 'SOLANA', walletType: 'SOLANA' },
-  ETH: { icon: 'Ξ', color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10', network: 'Base Sepolia', networkId: 'BASE', walletType: 'EVM' },
-  BNB: { icon: '⬡', color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10', network: 'BSC Testnet', networkId: 'BSC', walletType: 'EVM' },
+  SOL: { color: 'text-purple-400', border: 'border-purple-500/30', bg: 'bg-purple-500/10', network: 'Solana Network', networkId: 'SOLANA', walletType: 'SOLANA' },
+  ETH: { color: 'text-blue-400', border: 'border-blue-500/30', bg: 'bg-blue-500/10', network: 'Base Sepolia', networkId: 'BASE', walletType: 'EVM' },
+  BNB: { color: 'text-yellow-400', border: 'border-yellow-500/30', bg: 'bg-yellow-500/10', network: 'BSC Testnet', networkId: 'BSC', walletType: 'EVM' },
 } as const;
 
 function fmt(n: string | number): string {
@@ -302,8 +303,8 @@ export default function TopUpPage() {
                         ? 'selected border-brand-500 bg-brand-600/10 glass shadow-brand-glow'
                         : `border-line-subtle hover:bg-surface-2`
                     )}>
-                    <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center text-2xl font-black', ai.bg, ai.border, ai.color)}>
-                      {ai.icon}
+                    <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center', ai.bg, ai.border)}>
+                      <TokenIcon symbol={a} size={26} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
@@ -368,7 +369,7 @@ export default function TopUpPage() {
             <button onClick={() => setStep('asset')} className="text-gray-500 hover:text-white text-sm flex items-center gap-1">← Kembali</button>
 
             <div className="flex items-center gap-3 p-4 bg-surface-1 rounded-xl border border-line-subtle">
-              <span className={clsx('text-2xl font-black', info?.color)}>{info?.icon}</span>
+              <TokenIcon symbol={asset} size={26} />
               <div>
                 <p className={clsx('font-bold', info?.color)}>{asset} — {info?.network}</p>
                 <p className="text-gray-500 text-xs">Wallet: {resolvedAddress?.slice(0, 8)}...{resolvedAddress?.slice(-4)}</p>
@@ -434,7 +435,7 @@ export default function TopUpPage() {
             {/* SOL ATA fee notice */}
             {asset === 'SOL' && quote.solAtaFeeSol && parseFloat(quote.solAtaFeeSol) > 0 && (
               <div className="flex items-start gap-2 p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl">
-                <span className="text-purple-400 text-xs mt-0.5">◎</span>
+                <TokenIcon symbol="SOL" size={14} />
                 <p className="text-purple-300 text-xs">
                   Termasuk biaya ATA (Associated Token Account): <strong className="text-white">{parseFloat(quote.solAtaFeeSol).toFixed(4)} SOL</strong> dipotong dari SOL yang diterima untuk memastikan transaksi berhasil.
                 </p>

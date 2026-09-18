@@ -21,6 +21,7 @@ import { useConnectors, type Connector } from 'wagmi';
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import { WalletReadyState } from '@solana/wallet-adapter-base';
 import { useWallet } from '@/contexts/WalletContext';
+import { TokenIcon } from '@/components/ui/TokenIcon';
 import { CHAIN_NAMES } from '@/lib/assets';
 import {
   X, Wallet, CheckCircle2, AlertCircle, ExternalLink,
@@ -195,7 +196,8 @@ export function UnifiedWalletModal() {
           <div className="pt-3">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-yellow-400 text-sm">⬡</span>
+                <TokenIcon symbol="ETH" size={14} />
+                <TokenIcon symbol="BNB" size={14} />
                 <p className="text-gray-300 text-sm font-semibold">EVM — Base Sepolia & BSC Testnet</p>
                 <span className="text-gray-600 text-xs">ETH / BNB</span>
               </div>
@@ -309,7 +311,7 @@ export function UnifiedWalletModal() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-purple-400 text-sm">◎</span>
+                <TokenIcon symbol="SOL" size={14} />
                 <p className="text-gray-300 text-sm font-semibold">Solana</p>
                 <span className="text-gray-600 text-xs">SOL — Devnet</span>
               </div>
@@ -351,7 +353,7 @@ export function UnifiedWalletModal() {
                     {w.icon ? (
                       <img src={w.icon} alt={w.name} width={32} height={32} className="w-8 h-8 rounded-lg" />
                     ) : (
-                      <span className="text-2xl w-8 text-center">{SOLANA_ICONS[w.name] ?? '◎'}</span>
+                      <span className="text-2xl w-8 text-center">{SOLANA_ICONS[w.name] ?? '●'}</span>
                     )}
                     <div className="flex-1 min-w-0">
                       <p className="text-white text-sm font-semibold group-hover:text-purple-300 transition-colors">{w.name}</p>
