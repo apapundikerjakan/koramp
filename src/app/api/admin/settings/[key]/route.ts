@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/adminAuth';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError } from '@/lib/response';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,12 +11,15 @@ const schema = z.object({
   value: z.string().min(1).max(1000),
 });
 
-// Allowlist for manual price keys + general settings prefix.
-// Prevents arbitrary key injection while keeping flexibility.
-const ALLOWED_EXACT = new Set(['price_sol_idr', 'price_eth_idr', 'price_bnb_idr']);
+// Allowlist for manual price keys + explicitly approved settings.
+// Previously a loose regex allowed ANY key — now strictly allowlisted to
+// prevent SystemSetting key pollution / future key-confusion.
+const ALLOWED_EXACT = new Set([
+  'price_sol_idr', 'price_eth_idr', 'price_bnb_idr',
+  'maintenance_mode', 'announcement_id', 'support_contact',
+]);
 function isAllowedKey(key: string): boolean {
   if (ALLOWED_EXACT.has(key)) return true;
-  if (/^[a-z0-9_]{1,64}$/i.test(key)) return true;
   return false;
 }
 
@@ -25,7 +29,8 @@ export async function PUT(req: NextRequest, { params }: { params: { key: string 
     if (!isAllowedKey(params.key)) {
       return ok({ error: 'Invalid setting key' }, 400);
     }
-    const { value } = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const { value } = schema.parse(await readJsonBounded(req));
     // Manual price keys must be positive numbers (financial safety).
     if (params.key.startsWith('price_')) {
       const n = Number(value);
@@ -38,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: { key: string 
       create: { key: params.key, value },
       update: { value },
     });
-    await prisma.auditLog.create({ data: { action: 'SETTINGS_CHANGED', entity: 'SystemSetting', actor: `admin:${admin.adminId}`, metadata: JSON.stringify({ key: params.key }) } });
+    await audit({ action: 'SETTINGS_CHANGED', entity: 'SystemSetting', actor: `admin:${admin.adminId}`, metadata: { key: params.key } });
     return ok({ setting });
   } catch (err) { return handleError(err); }
 }

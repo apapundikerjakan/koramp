@@ -12,6 +12,7 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
+import { shortAddress } from '@/lib/format';
 import { ChevronDown, Copy, LogOut, CheckCircle2, Plus, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -30,7 +31,7 @@ const ConnectButton = dynamic(
 );
 
 function short(addr: string): string {
-  return addr.length <= 12 ? addr : `${addr.slice(0, 5)}...${addr.slice(-4)}`;
+  return shortAddress(addr, 5);
 }
 
 export function WalletButton() {

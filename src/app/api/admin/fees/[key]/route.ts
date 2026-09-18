@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError } from '@/lib/response';
 import { AppError } from '@/lib/errors';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,7 +45,8 @@ export async function PUT(
       throw new AppError(400, 'INVALID_KEY', `Unknown type: ${type}`);
     }
 
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
 
     // Financial bounds (prevent absurd/malicious fee config even by admin mistake).
     const rate = parseFloat(body.serviceFeeRate);
@@ -93,14 +95,12 @@ export async function PUT(
       },
     });
 
-    await prisma.auditLog.create({
-      data: {
-        action: 'FEE_CONFIG_UPDATED',
-        entity: 'FeeConfig',
-        entityId: feeConfig.id,
-        actor: `admin:${admin.adminId}`,
-        metadata: JSON.stringify({ key: params.key, ...body }),
-      },
+    await audit({
+      action: 'FEE_CONFIG_UPDATED',
+      entity: 'FeeConfig',
+      entityId: feeConfig.id,
+      actor: `admin:${admin.adminId}`,
+      metadata: { key: params.key, ...body },
     });
 
     return ok({

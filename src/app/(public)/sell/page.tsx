@@ -14,6 +14,10 @@ import clsx from 'clsx';
 import { buildPaymentUri } from '@/lib/paymentQr';
 import { CHAIN_NAMES } from '@/lib/assets';
 import { FeeBreakdown } from '@/components/ui/FeeBreakdown';
+import {
+  StepIndicator, ToolChip, StreamingText,
+  AnimatedCounter, ParticleBurst, ShimmerText,
+} from '@/components/ui/motion';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -442,18 +446,18 @@ export default function SellPage() {
 
         {/* Step indicator */}
         {!['success'].includes(step) && (
-          <div className="flex items-center gap-2 mb-8">
-            {(['asset', 'amount', 'bank', 'confirm', 'sending', 'waiting'] as Step[]).map((s, i) => (
-              <div key={s} className="flex items-center gap-2 flex-shrink-0">
-                <div className={clsx(
-                  'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all',
-                  s === step ? 'bg-green-600 text-white' :
-                  STEPS.indexOf(s) < stepIdx ? 'bg-green-500 text-white' : 'bg-[#1a1a3e] text-gray-500',
-                )}>{STEPS.indexOf(s) < stepIdx ? '✓' : i + 1}</div>
-                {i < 5 && <div className="w-4 h-px bg-[#1a1a3e]" />}
-              </div>
-            ))}
-          </div>
+          <StepIndicator
+            steps={[
+              { key: 'asset', label: 'Aset' },
+              { key: 'amount', label: 'Nominal' },
+              { key: 'bank', label: 'Bank' },
+              { key: 'confirm', label: 'Konfirmasi' },
+              { key: 'sending', label: 'Kirim' },
+              { key: 'waiting', label: 'Tunggu' },
+            ]}
+            current={stepIdx}
+            accent="bg-green-600"
+          />
         )}
 
         {/* ── ASSET ───────────────────────────────────────────────────────── */}
@@ -463,10 +467,13 @@ export default function SellPage() {
             <div className="space-y-3">
               {(['SOL', 'ETH', 'BNB'] as Asset[]).map(a => {
                 const ai = ASSET_INFO[a];
+                const glow = a === 'SOL' ? 'glow-sol' : a === 'ETH' ? 'glow-eth' : 'glow-bnb';
                 return (
                   <button key={a} onClick={() => handleSelectAsset(a)} type="button"
-                    className={clsx('w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left',
-                      asset === a ? 'border-green-500 bg-green-600/10' : 'border-[#1a1a3e] hover:border-[#2a2a4e]',
+                    aria-pressed={asset === a}
+                    className={clsx('w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left asset-lift',
+                      glow,
+                      asset === a ? 'selected border-green-500 bg-green-600/10 glass' : 'border-[#1a1a3e] hover:bg-[#0f0f28]',
                     )}>
                     <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center text-2xl font-black', ai.bg, ai.border, ai.color)}>{ai.icon}</div>
                     <div className="flex-1">
@@ -577,6 +584,11 @@ export default function SellPage() {
               onClick={getQuote}>
               {quoteLoading ? <><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Menghitung...</> : 'Dapatkan Quote →'}
             </button>
+            {quoteLoading && (
+              <p className="text-center text-sm" role="status">
+                <ShimmerText>Mengambil harga pasar terbaru...</ShimmerText>
+              </p>
+            )}
           </div>
         )}
 
@@ -905,6 +917,21 @@ export default function SellPage() {
               </div>
             )}
 
+            {/* Deposit status chip (Beautiful UI tool chip) */}
+            <div className="flex justify-center">
+              <ToolChip
+                state={depositStatus === 'confirmed' ? 'done' : depositStatus === 'waiting' ? 'pending' : 'running'}
+              >
+                {depositStatus === 'confirmed'
+                  ? 'Crypto dikonfirmasi'
+                  : depositStatus === 'detected'
+                    ? 'Terdeteksi — menunggu konfirmasi'
+                    : depositStatus === 'confirming'
+                      ? `Mengonfirmasi blockchain${depositConfs ? ` ${depositConfs.current}/${depositConfs.required}` : '...'}`
+                      : 'Menunggu pengiriman crypto'}
+              </ToolChip>
+            </div>
+
             {/* Payout status */}
             <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-2xl p-5 space-y-4">
               <div className="flex items-center gap-3">
@@ -913,7 +940,11 @@ export default function SellPage() {
                 </div>
                 <div>
                   <p className="text-white font-bold text-sm">Payout IDR</p>
-                  <p className="text-green-400 font-black text-lg">{fmt(order.totalIdrPayout)}</p>
+                  <AnimatedCounter
+                    value={parseFloat(order.totalIdrPayout) || 0}
+                    format={(n) => fmt(n)}
+                    className="text-green-400 font-black text-lg"
+                  />
                 </div>
               </div>
 
@@ -951,7 +982,8 @@ export default function SellPage() {
 
         {/* ── SUCCESS ─────────────────────────────────────────────────────── */}
         {step === 'success' && order && (
-          <div className="space-y-5 animate-fade-in">
+          <div className="relative space-y-5 animate-fade-in">
+            <ParticleBurst />
             <div className="text-center">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-10 h-10 text-green-400" />

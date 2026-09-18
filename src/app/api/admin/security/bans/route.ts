@@ -56,7 +56,8 @@ const banSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const admin = await requireAdmin(req);
-    const body = banSchema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = banSchema.parse(await readJsonBounded(req));
 
     const existing = await prisma.ipBan.findUnique({ where: { ip: body.ip } }).catch(() => null);
     if (existing?.permanent && !body.permanent) {
@@ -124,16 +125,17 @@ const patchSchema = z.object({
 export async function PATCH(req: NextRequest) {
   try {
     const admin = await requireAdmin(req);
-    const body = patchSchema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = patchSchema.parse(await readJsonBounded(req));
     const existing = await prisma.ipBan.findUnique({ where: { ip: body.ip } });
     if (!existing) {
       return NextResponse.json({ error: { code: 'NOT_FOUND', message: 'Ban not found' } }, { status: 404 });
     }
 
     if (body.action === 'false-positive') {
-      // Clear history + lift: shared IPs must not carry ancient stains.
+      // Unban but PRESERVE forensics: keep security events, only lift the ban.
+      // Use explicit purge flow for data deletion (dual-confirm outside this API).
       await prisma.ipBan.delete({ where: { ip: body.ip } });
-      await prisma.securityEvent.deleteMany({ where: { ip: body.ip } });
       dropBanCache(body.ip);
       await prisma.auditLog.create({
         data: { action: 'IP_FALSE_POSITIVE', entity: 'IpBan', entityId: existing.id, actor: `admin:${admin.adminId}`, metadata: JSON.stringify({ ip: body.ip }) },
@@ -142,8 +144,18 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (body.action === 'extend') {
+      // Cap cumulative extension: ban must never become de-facto infinite
+      // via repeat-extend. Max total duration capped by MAX_AUTOMATIC_BAN_HOURS
+      // unless converted to permanent (explicit).
+      const { SEC } = await import('@/lib/security');
       const base = existing.expiresAt && existing.expiresAt.getTime() > Date.now() ? existing.expiresAt.getTime() : Date.now();
-      const expiresAt = new Date(base + (body.durationMs ?? 3600000));
+      const proposed = new Date(base + (body.durationMs ?? 3600000));
+      const maxTotalMs = SEC.maxAutoHours * 3600 * 1000;
+      const totalFromStart = proposed.getTime() - existing.createdAt.getTime();
+      if (totalFromStart > maxTotalMs && !existing.permanent) {
+        return NextResponse.json({ error: { code: 'BAN_CAP_EXCEEDED', message: `Total ban melebihi batas ${SEC.maxAutoHours} jam — gunakan permanent eksplisit` } }, { status: 400 });
+      }
+      const expiresAt = proposed;
       const ban = await prisma.ipBan.update({
         where: { ip: body.ip },
         data: { expiresAt, permanent: false, durationMs: expiresAt.getTime() - existing.createdAt.getTime(), eventRef: `admin:${admin.adminId}` },

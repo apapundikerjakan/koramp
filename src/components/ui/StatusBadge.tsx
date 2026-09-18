@@ -1,12 +1,13 @@
 import clsx from 'clsx';
+import { ThinkingOrbs } from './motion';
 
-type StatusMap = Record<string, { label: string; className: string }>;
+type StatusMap = Record<string, { label: string; className: string; live?: boolean }>;
 
 const TOP_UP_STATUS: StatusMap = {
   CREATED: { label: 'Created', className: 'badge-info' },
-  PAYMENT_PENDING: { label: 'Awaiting Payment', className: 'badge-warning' },
+  PAYMENT_PENDING: { label: 'Awaiting Payment', className: 'badge-warning', live: true },
   PAYMENT_CONFIRMED: { label: 'Payment Confirmed', className: 'badge-success' },
-  CRYPTO_PROCESSING: { label: 'Processing', className: 'badge-warning' },
+  CRYPTO_PROCESSING: { label: 'Processing', className: 'badge-warning', live: true },
   CRYPTO_SENT: { label: 'Crypto Sent', className: 'badge-purple' },
   COMPLETED: { label: 'Completed', className: 'badge-success' },
   PAYMENT_FAILED: { label: 'Payment Failed', className: 'badge-error' },
@@ -17,11 +18,11 @@ const TOP_UP_STATUS: StatusMap = {
 
 const SELL_STATUS: StatusMap = {
   CREATED: { label: 'Created', className: 'badge-info' },
-  AWAITING_CRYPTO: { label: 'Awaiting Crypto', className: 'badge-warning' },
+  AWAITING_CRYPTO: { label: 'Awaiting Crypto', className: 'badge-warning', live: true },
   CRYPTO_DETECTED: { label: 'Crypto Detected', className: 'badge-info' },
-  CONFIRMING: { label: 'Confirming', className: 'badge-warning' },
+  CONFIRMING: { label: 'Confirming', className: 'badge-warning', live: true },
   CRYPTO_CONFIRMED: { label: 'Crypto Confirmed', className: 'badge-success' },
-  PAYOUT_PROCESSING: { label: 'Payout Processing', className: 'badge-warning' },
+  PAYOUT_PROCESSING: { label: 'Payout Processing', className: 'badge-warning', live: true },
   PAYOUT_SENT: { label: 'Payout Sent', className: 'badge-purple' },
   COMPLETED: { label: 'Completed', className: 'badge-success' },
   EXPIRED: { label: 'Expired', className: 'badge-error' },
@@ -35,9 +36,15 @@ interface StatusBadgeProps {
   type?: 'TOP_UP' | 'SELL';
 }
 
+/** Status badge — waiting states get thinking orbs (AICSS) + aria-live. */
 export function StatusBadge({ status, type = 'TOP_UP' }: StatusBadgeProps) {
   const map = type === 'TOP_UP' ? TOP_UP_STATUS : SELL_STATUS;
   const info = map[status] ?? { label: status, className: 'badge-info' };
 
-  return <span className={info.className}>{info.label}</span>;
+  return (
+    <span className={clsx(info.className, info.live && 'animate-pulse-soft')} role="status" aria-label={`Status: ${info.label}`}>
+      {info.live && <ThinkingOrbs />}
+      {info.label}
+    </span>
+  );
 }

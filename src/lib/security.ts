@@ -31,10 +31,19 @@ export function maxBodyBytes(): number {
 /** Read request text, rejecting oversized bodies with 413 (fail closed). */
 export async function readBoundedBody(req: Request): Promise<string> {
   const raw = await req.text();
-  if (raw.length > maxBodyBytes()) {
+  // Compare BYTES not chars — multibyte bodies would otherwise undercount 2-3x.
+  const len = typeof Buffer !== 'undefined' ? Buffer.byteLength(raw, 'utf8') : raw.length;
+  if (len > maxBodyBytes()) {
     throw new AppError(413, 'PAYLOAD_TOO_LARGE', 'Request body too large');
   }
   return raw;
+}
+
+/** Clamped webhook max-age seconds — prevents 48h replay window via env typo. */
+export function webhookMaxAgeSec(): number {
+  const raw = Number(process.env.WEBHOOK_MAX_AGE_SEC ?? 300);
+  if (!Number.isFinite(raw)) return 300;
+  return Math.min(3600, Math.max(60, Math.floor(raw)));
 }
 
 // ─── Config (all overridable via env, never exposed to frontend) ───────────────
@@ -448,6 +457,7 @@ export async function checkDistributedAttack(
     const rows = await prisma.securityEvent.findMany({
       where: { eventType: 'ADMIN_LOGIN_FAIL', lastSeen: { gte: since } },
       select: { ip: true },
+      take: SEC.distIps + 1,
     });
     const distinct = new Set(rows.map((r) => r.ip));
     if (distinct.size >= SEC.distIps && Date.now() - lastDistAlert > DIST_ALERT_COOLDOWN_MS) {

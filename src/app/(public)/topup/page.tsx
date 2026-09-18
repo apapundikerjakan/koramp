@@ -7,8 +7,12 @@ import { useWallet } from '@/contexts/WalletContext';
 import { ArrowRight, AlertTriangle, Clock, CheckCircle2, RefreshCw, Copy, Info, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import clsx from 'clsx';
-import { CHAIN_NAMES } from '@/lib/assets';
+import { CHAIN_NAMES, getTxExplorerUrl } from '@/lib/assets';
 import { FeeBreakdown } from '@/components/ui/FeeBreakdown';
+import {
+  StepIndicator, QrFrame, ToolChip, StreamingText,
+  AnimatedCounter, ParticleBurst, ShimmerText,
+} from '@/components/ui/motion';
 
 type Asset = 'SOL' | 'ETH' | 'BNB';
 type Step = 'connect' | 'asset' | 'amount' | 'confirm' | 'payment' | 'success';
@@ -269,17 +273,15 @@ export default function TopUpPage() {
 
         {/* Step indicator */}
         {step !== 'success' && (
-          <div className="flex items-center gap-2 mb-8 overflow-x-auto">
-            {(['asset', 'amount', 'confirm', 'payment'] as Step[]).map((s, i) => (
-              <div key={s} className="flex items-center gap-2 flex-shrink-0">
-                <div className={clsx('w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all',
-                  s === step ? 'bg-brand-600 text-white' :
-                  STEPS.indexOf(s) < stepIdx ? 'bg-green-500 text-white' : 'bg-[#1a1a3e] text-gray-500'
-                )}>{i + 1}</div>
-                {i < 3 && <div className="w-6 h-px bg-[#1a1a3e]" />}
-              </div>
-            ))}
-          </div>
+          <StepIndicator
+            steps={[
+              { key: 'asset', label: 'Aset' },
+              { key: 'amount', label: 'Nominal' },
+              { key: 'confirm', label: 'Konfirmasi' },
+              { key: 'payment', label: 'Bayar' },
+            ]}
+            current={Math.min(stepIdx, 3)}
+          />
         )}
 
         {/* ── STEP: ASSET ─────────────────────────────────────── */}
@@ -289,10 +291,15 @@ export default function TopUpPage() {
             <div className="space-y-3">
               {(['SOL', 'ETH', 'BNB'] as Asset[]).map(a => {
                 const ai = ASSET_INFO[a];
+                const glow = a === 'SOL' ? 'glow-sol' : a === 'ETH' ? 'glow-eth' : 'glow-bnb';
                 return (
                   <button key={a} onClick={() => handleSelectAsset(a)} type="button"
-                    className={clsx('w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left',
-                      asset === a ? 'border-brand-500 bg-brand-600/10' : `border-[#1a1a3e] hover:${ai.border} hover:bg-[#0f0f28]`
+                    aria-pressed={asset === a}
+                    className={clsx('w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left asset-lift',
+                      glow,
+                      asset === a
+                        ? 'selected border-brand-500 bg-brand-600/10 glass shadow-brand-glow'
+                        : `border-[#1a1a3e] hover:bg-[#0f0f28]`
                     )}>
                     <div className={clsx('w-12 h-12 rounded-xl border flex items-center justify-center text-2xl font-black', ai.bg, ai.border, ai.color)}>
                       {ai.icon}
@@ -395,6 +402,11 @@ export default function TopUpPage() {
               onClick={getQuote}>
               {quoteLoading ? <><RefreshCw className="w-4 h-4 animate-spin inline mr-2" />Menghitung...</> : 'Dapatkan Quote →'}
             </button>
+            {quoteLoading && (
+              <p className="text-center text-sm" role="status">
+                <ShimmerText>Mengambil harga pasar terbaru...</ShimmerText>
+              </p>
+            )}
           </div>
         )}
 
@@ -447,9 +459,11 @@ export default function TopUpPage() {
               {/* What user receives */}
               <div className="flex justify-between items-center pt-2 border-t border-[#1a1a3e]">
                 <span className="text-gray-400 text-sm font-semibold">Anda terima</span>
-                <span className={clsx('font-black text-xl', info?.color)}>
-                  {fmtCrypto(quote.cryptoAmount)} {asset}
-                </span>
+                <AnimatedCounter
+                  value={parseFloat(quote.cryptoAmount) || 0}
+                  format={(n) => `${fmtCrypto(n)} ${asset}`}
+                  className={clsx('font-black text-xl', info?.color)}
+                />
               </div>
             </div>
 
@@ -518,33 +532,35 @@ export default function TopUpPage() {
               </div>
             </div>
 
-            {/* QRIS Image */}
-            <div className="flex flex-col items-center">
-              <div className="p-4 bg-white rounded-2xl inline-block shadow-xl shadow-black/20">
-                {!qrError ? (
-                  <img
-                    src={`/api/payments/qr/${payment.kipayTrxId}`}
-                    alt="QRIS Kipramp"
-                    width={240} height={240}
-                    className="block"
-                    onError={() => setQrError(true)}
-                  />
-                ) : (
-                  <div className="w-60 h-60 flex flex-col items-center justify-center gap-2 text-gray-400">
-                    <p className="text-sm text-center">QR belum tersedia</p>
-                    <p className="text-xs text-gray-500 text-center">Memuat ulang...</p>
-                    <button
-                      type="button"
-                      className="mt-1 text-xs text-brand-400 underline"
-                      onClick={() => { setQrError(false); }}
-                    >
-                      Muat ulang QR
-                    </button>
-                  </div>
-                )}
-              </div>
-              <p className="text-gray-600 text-xs mt-3">Powered by KiPay · QRIS</p>
+            {/* Status chip (AICSS thinking pattern) */}
+            <div className="flex justify-center">
+              <ToolChip state="running">Menunggu pembayaran...</ToolChip>
             </div>
+
+            {/* QRIS Image */}
+            <QrFrame waiting={!qrError} confirmed={false} caption="Powered by KiPay · QRIS">
+              {!qrError ? (
+                <img
+                  src={`/api/payments/qr/${payment.kipayTrxId}`}
+                  alt="QRIS Kipramp"
+                  width={240} height={240}
+                  className="block"
+                  onError={() => setQrError(true)}
+                />
+              ) : (
+                <div className="w-60 h-60 flex flex-col items-center justify-center gap-2 text-gray-400">
+                  <p className="text-sm text-center">QR belum tersedia</p>
+                  <p className="text-xs text-gray-500 text-center">Memuat ulang...</p>
+                  <button
+                    type="button"
+                    className="mt-1 text-xs text-brand-400 underline"
+                    onClick={() => { setQrError(false); }}
+                  >
+                    Muat ulang QR
+                  </button>
+                </div>
+              )}
+            </QrFrame>
 
             {/* Payment details */}
             <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-4 space-y-2">
@@ -610,7 +626,8 @@ export default function TopUpPage() {
 
         {/* ── STEP: SUCCESS ─────────────────────────────────── */}
         {step === 'success' && (
-          <div className="text-center space-y-5 animate-fade-in">
+          <div className="relative text-center space-y-5 animate-fade-in">
+            {cryptoConfirmed && <ParticleBurst />}
             <div className={clsx(
               'w-20 h-20 rounded-full flex items-center justify-center mx-auto',
               cryptoConfirmed ? 'bg-green-500/20' : 'bg-brand-600/20'
@@ -631,7 +648,7 @@ export default function TopUpPage() {
                 <>
                   <h2 className="text-2xl font-black text-white">Pembayaran Dikonfirmasi!</h2>
                   <p className="text-gray-400 text-sm mt-2">
-                    Crypto sedang dikirim ke wallet Anda. Menunggu konfirmasi blockchain…
+                    <StreamingText text="Crypto sedang dikirim ke wallet Anda. Menunggu konfirmasi blockchain..." />
                   </p>
                 </>
               )}
@@ -640,17 +657,11 @@ export default function TopUpPage() {
               <div className="bg-[#0b0b1f] border border-[#1a1a3e] rounded-xl p-5 text-left space-y-3">
                 <div className="flex justify-between text-sm"><span className="text-gray-500">Order</span><span className="text-white font-mono text-xs">{order.orderNumber}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-gray-500">Asset</span><span className={info?.color}>{asset} — {info?.network}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-gray-500">Jumlah</span><span className="text-white font-bold">{fmtCrypto(order.cryptoAmount)} {asset}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-500">Jumlah</span><AnimatedCounter value={parseFloat(order.cryptoAmount) || 0} format={(n) => `${fmtCrypto(n)} ${asset}`} className="text-white font-bold" /></div>
                 <div className="flex justify-between text-sm"><span className="text-gray-500">Wallet</span><span className="text-white font-mono text-xs">{resolvedAddress?.slice(0, 10)}...{resolvedAddress?.slice(-4)}</span></div>
                 {(cryptoTxHash ?? order.cryptoTxHash) && (() => {
                   const txHash = cryptoTxHash ?? order.cryptoTxHash;
-                  const buildExplorerUrl = (networkId: string, hash: string) => {
-                    if (networkId === 'SOLANA') return `https://solscan.io/tx/${hash}?cluster=devnet`;
-                    if (networkId === 'BASE') return `https://sepolia.basescan.org/tx/${hash}`;
-                    if (networkId === 'BSC') return `https://testnet.bscscan.com/tx/${hash}`;
-                    return null;
-                  };
-                  const explorerUrl = asset ? buildExplorerUrl(ASSET_INFO[asset].networkId, txHash) : null;
+                  const explorerUrl = asset ? getTxExplorerUrl(ASSET_INFO[asset].networkId, txHash) : null;
                   return (
                     <div className="flex justify-between text-sm items-center gap-2">
                       <span className="text-gray-500 flex-shrink-0">TX Hash</span>

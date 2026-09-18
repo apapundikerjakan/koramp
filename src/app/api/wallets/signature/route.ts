@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getBlockchainProvider } from '@/lib/blockchain';
-import { validateAssetNetwork, getWalletEcosystem } from '@/lib/assets';
 import { ok, handleError } from '@/lib/response';
+import { ValidationError } from '@/lib/errors';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { assertWalletForOrder } from '@/lib/validateWallet';
+import { AssetEnum, NetworkEnum, WalletTypeEnum } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,9 +14,9 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 
 const schema = z.object({
   address: z.string().min(10).max(100),
-  network: z.enum(['SOLANA', 'BASE', 'BSC']),
-  walletType: z.enum(['EVM', 'SOLANA']),
-  asset: z.enum(['SOL', 'ETH', 'BNB']),
+  network: NetworkEnum,
+  walletType: WalletTypeEnum,
+  asset: AssetEnum,
   signature: z.string().min(10).max(1000),
   message: z.string().min(10).max(1000),
 });
@@ -35,21 +37,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
 
-    if (!validateAssetNetwork(body.asset, body.network)) {
-      return handleError(new Error('Asset tidak cocok dengan network'));
-    }
+    assertWalletForOrder({ asset: body.asset, network: body.network, walletType: body.walletType, walletAddress: body.address });
 
-    const expectedEcosystem = getWalletEcosystem(body.asset);
-    if (body.walletType !== expectedEcosystem) {
-      return handleError(new Error('Wallet type tidak cocok'));
-    }
-
-    const bc = getBlockchainProvider(body.network);
-    const valid = bc.isValidAddress(body.address);
-    if (!valid) {
-      return handleError(new Error('Alamat wallet tidak valid'));
+    // Bind message to address: prevents arbitrary-message signature theater
+    // from being replayed as ownership proof for another address.
+    if (!body.message.toLowerCase().includes(body.address.toLowerCase())) {
+      throw new ValidationError('Message harus memuat alamat wallet (challenge terikat address)');
     }
 
     // Real cryptographic verification (previously returned verified:true without checking).

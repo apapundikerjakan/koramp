@@ -106,11 +106,12 @@ export async function createSessionToken(
   jti: string,
   uaHash: string,
 ): Promise<string> {
-  // Default 10-minute idle expiry. Env override allowed but 24h is rejected
+  // Default 10-minute idle expiry. Only short allowlisted values accepted
   // to prevent accidental long-lived admin sessions (P17).
   const configured = process.env.ADMIN_SESSION_EXPIRES_IN ?? '10m';
-  if (configured === '24h' || configured === '24H') {
-    throw new Error('ADMIN_SESSION_EXPIRES_IN=24h is not allowed — use max 10m idle timeout');
+  const ALLOWED = new Set(['5m', '10m', '15m']);
+  if (!ALLOWED.has(configured)) {
+    throw new Error('ADMIN_SESSION_EXPIRES_IN must be one of 5m, 10m, 15m');
   }
   return new SignJWT({ adminId, keyVersion, jti, uaHash })
     .setProtectedHeader({ alg: 'HS256' })
@@ -208,18 +209,18 @@ export async function adminLogin(key: string, userAgent: string, totpCode?: stri
   const result = await verifyAdminKey(key);
 
   if (!result) {
-    // Log tanpa expose detail
-    console.warn('[adminAuth] Login attempt failed — invalid or inactive key');
-    throw new AppError(401, 'UNAUTHORIZED', 'Invalid admin access key');
+    // Generic message — do not reveal whether key or TOTP failed (oracle fix).
+    console.warn('[adminAuth] Login attempt failed');
+    throw new AppError(401, 'UNAUTHORIZED', 'Kredensial admin tidak valid');
   }
 
   // Second factor: rotating authenticator code (enforced when configured).
-  // 6-digit space (1M) + login rate limit (30/15m) → guessing infeasible.
+  // Same generic message to avoid key-vs-TOTP oracle.
   if (isTotpEnabled()) {
     const ok = await verifyTotpCode(totpCode ?? '');
     if (!ok) {
-      console.warn('[adminAuth] Login attempt failed — invalid TOTP code');
-      throw new AppError(401, 'INVALID_TOTP', 'Kode authenticator salah atau kedaluwarsa');
+      console.warn('[adminAuth] Login attempt failed');
+      throw new AppError(401, 'UNAUTHORIZED', 'Kredensial admin tidak valid');
     }
   }
 
@@ -248,8 +249,8 @@ export async function adminLogin(key: string, userAgent: string, totpCode?: stri
 export async function requireAdmin(req: NextRequest): Promise<AdminSessionPayload> {
   // Quarantine gate first (memory-cached countdown response, no rule leakage).
   {
-    const fwd = req.headers.get('x-forwarded-for');
-    const ip = fwd ? (fwd.split(',')[0]?.trim() || 'unknown') : (req.headers.get('x-real-ip') ?? 'unknown');
+    const { getClientIp } = await import('./rateLimit');
+    const ip = getClientIp(req);
     const { banGate } = await import('./security');
     const rej = await banGate(ip);
     if (rej) {
@@ -263,15 +264,7 @@ export async function requireAdmin(req: NextRequest): Promise<AdminSessionPayloa
     }
   }
 
-  const cookieHeader = req.headers.get('cookie') ?? '';
-  const cookies = Object.fromEntries(
-    cookieHeader.split(';').map(c => {
-      const [name, ...rest] = c.trim().split('=');
-      return [name, rest.join('=')];
-    })
-  );
-
-  const sessionToken = cookies[SESSION_COOKIE_NAME];
+  const sessionToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionToken) {
     throw new AppError(401, 'UNAUTHORIZED', 'Admin session required');
   }
@@ -281,9 +274,8 @@ export async function requireAdmin(req: NextRequest): Promise<AdminSessionPayloa
   // Authenticated admin-API rate limit (120/min per IP — brute-force on
   // stolen sessions + flood containment; login has its own stricter bucket).
   {
-    const { rateLimit } = await import('./rateLimit');
-    const fwd = req.headers.get('x-forwarded-for');
-    const ip = fwd ? fwd.split(',')[0].trim() : (req.headers.get('x-real-ip') ?? 'unknown');
+    const { rateLimit, getClientIp } = await import('./rateLimit');
+    const ip = getClientIp(req);
     if (!rateLimit('admin-api', ip || 'unknown', 120, 60_000)) {
       throw new AppError(429, 'RATE_LIMITED', 'Too many requests. Silakan coba lagi nanti.');
     }

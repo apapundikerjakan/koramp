@@ -24,6 +24,13 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req);
+    {
+      const { banGate } = await import('@/lib/security');
+      const rej = await banGate(ip);
+      if (rej) {
+        return NextResponse.json(rej.body, { status: rej.status, headers: { 'Retry-After': String(rej.retryAfter) } });
+      }
+    }
     if (!rateLimit('webhook-kipay', ip, RATE_LIMITS.webhook.max, RATE_LIMITS.webhook.windowMs)) {
       return NextResponse.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, { status: 429 });
     }
@@ -48,10 +55,19 @@ export async function POST(req: NextRequest) {
 
     if (sigResult === 'no_secret') {
       // KIPAY_WEBHOOK_SECRET not configured — accept but warn.
-      console.warn(JSON.stringify({
-        scope: 'kipay', operation: 'webhook',
-        warning: 'KIPAY_WEBHOOK_SECRET not set — signature verification skipped',
-      }));
+      // In production this must be set; fulfillment still re-verifies
+      // server-to-server so unsigned spam cannot mint value.
+      if (process.env.NODE_ENV === 'production') {
+        console.error(JSON.stringify({
+          scope: 'kipay', operation: 'webhook',
+          errorCategory: 'WEBHOOK_SECRET_MISSING_PROD',
+        }));
+      } else {
+        console.warn(JSON.stringify({
+          scope: 'kipay', operation: 'webhook',
+          warning: 'KIPAY_WEBHOOK_SECRET not set — signature verification skipped',
+        }));
+      }
     }
 
     if (sigResult === 'missing_headers') {
@@ -99,7 +115,8 @@ export async function POST(req: NextRequest) {
     const timestampHeader = req.headers.get('x-webhook-timestamp') ?? parsed.sentAt;
     if (timestampHeader) {
       const ts = new Date(timestampHeader).getTime();
-      const maxAgeMs = Number(process.env.WEBHOOK_MAX_AGE_SEC ?? 300) * 1000; // default 5 min
+      const { webhookMaxAgeSec } = await import('@/lib/security');
+      const maxAgeMs = webhookMaxAgeSec() * 1000; // clamped 60-3600s, default 300
       const now = Date.now();
       if (!Number.isFinite(ts) || ts > now + 5 * 60_000 || now - ts > maxAgeMs) {
         console.warn(JSON.stringify({ scope: 'kipay', operation: 'webhook', errorCategory: 'STALE_EVENT' }));

@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getBlockchainProvider } from '@/lib/blockchain';
-import { validateAssetNetwork, getWalletEcosystem } from '@/lib/assets';
 import { ok, handleError } from '@/lib/response';
-import { ValidationError } from '@/lib/errors';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { assertWalletForOrder } from '@/lib/validateWallet';
+import { AssetEnum, NetworkEnum, WalletTypeEnum } from '@/lib/schemas';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,9 +12,9 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 
 const schema = z.object({
   address: z.string().min(10).max(100),
-  network: z.enum(['SOLANA', 'BASE', 'BSC']),
-  asset: z.enum(['SOL', 'ETH', 'BNB']),
-  walletType: z.enum(['EVM', 'SOLANA']),
+  network: NetworkEnum,
+  asset: AssetEnum,
+  walletType: WalletTypeEnum,
   message: z.string().optional(),
 });
 
@@ -36,25 +35,10 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
 
-    // Validate asset/network compatibility
-    if (!validateAssetNetwork(body.asset, body.network)) {
-      throw new ValidationError(`Asset ${body.asset} tidak cocok dengan network ${body.network}`);
-    }
-
-    // Validate wallet type matches asset ecosystem
-    const expectedEcosystem = getWalletEcosystem(body.asset);
-    if (body.walletType !== expectedEcosystem) {
-      throw new ValidationError(`Wallet type ${body.walletType} tidak cocok untuk asset ${body.asset}`);
-    }
-
-    // Validate address format using blockchain provider
-    const bc = getBlockchainProvider(body.network);
-    const valid = bc.isValidAddress(body.address);
-    if (!valid) {
-      throw new ValidationError(`Alamat wallet tidak valid untuk network ${body.network}`);
-    }
+    assertWalletForOrder({ asset: body.asset, network: body.network, walletType: body.walletType, walletAddress: body.address });
 
     // If message provided, verify it's not empty and return verification challenge
     if (body.message) {

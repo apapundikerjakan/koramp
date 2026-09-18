@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
 import { processCryptoDelivery, processSellPayout } from '@/lib/orders';
 import { ok } from '@/lib/response';
+import { guardCron } from '@/lib/apiGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,11 +23,8 @@ export const dynamic = 'force-dynamic';
 let running = false;
 
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = req.headers.get('authorization') ?? '';
-    if (auth !== `Bearer ${secret}`) return ok({ ok: false, error: 'unauthorized' });
-  }
+  const denied = guardCron(req);
+  if (denied) return denied;
   if (running) {
     // eslint-disable-next-line no-console
     console.info(JSON.stringify({ scope: 'cron', event: 'reconcile_skipped_overlap' }));

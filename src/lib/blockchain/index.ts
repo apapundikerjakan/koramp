@@ -10,6 +10,13 @@ export function getBlockchainProvider(network: NetworkId): BlockchainProvider {
     );
   }
 
+  // Fail-closed in production: mock provider must never serve real traffic.
+  if (process.env.NODE_ENV === 'production' && type !== 'real') {
+    throw new Error(
+      '[blockchain] BLOCKCHAIN_PROVIDER must be "real" in production (mock would return fake balances/transactions)',
+    );
+  }
+
   if (type === 'mock') {
     const { createMockProvider } = require('./mock');
     return createMockProvider(network);

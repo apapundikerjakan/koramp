@@ -36,6 +36,7 @@ import Decimal from 'decimal.js';
 import { prisma } from './prisma';
 import { AppError } from './errors';
 import { getLivePrice } from './marketPrice';
+import { SUPPORTED_ASSETS, validateAssetNetwork as canonicalCheck } from './assets';
 
 Decimal.set({ precision: 30, rounding: Decimal.ROUND_HALF_UP });
 
@@ -43,26 +44,23 @@ export type AssetSymbol = 'SOL' | 'ETH' | 'BNB';
 export type NetworkId = 'SOLANA' | 'BASE' | 'BSC';
 export type OrderType = 'TOP_UP' | 'SELL';
 
-// ─── Network validation ───────────────────────────────────────────────────────
+export { SUPPORTED_ASSETS };
 
-const ASSET_NETWORK: Record<AssetSymbol, NetworkId> = {
-  SOL: 'SOLANA',
-  ETH: 'BASE',
-  BNB: 'BSC',
-};
+// ─── Network validation (canonical map lives in ./assets — no duplicate) ─────
 
 export function validateAssetNetwork(asset: AssetSymbol, network: NetworkId) {
-  if (ASSET_NETWORK[asset] !== network) {
+  if (!canonicalCheck(asset, network)) {
+    const expected = SUPPORTED_ASSETS[asset]?.networkId ?? 'unknown';
     throw new AppError(
       400,
       'NETWORK_MISMATCH',
-      `${asset} harus menggunakan jaringan ${ASSET_NETWORK[asset]}, bukan ${network}`,
+      `${asset} harus menggunakan jaringan ${expected}, bukan ${network}`,
     );
   }
 }
 
 export function getExpectedNetwork(asset: AssetSymbol): NetworkId {
-  return ASSET_NETWORK[asset];
+  return SUPPORTED_ASSETS[asset].networkId;
 }
 
 // ─── Fee config ───────────────────────────────────────────────────────────────
@@ -270,7 +268,8 @@ export async function createQuote(
     } // end Mode A
   } // end SELL
 
-  const ttl = parseInt(process.env.QUOTE_TTL_SECONDS ?? '120', 10);
+  const rawTtl = Number(process.env.QUOTE_TTL_SECONDS ?? '120');
+  const ttl = Number.isFinite(rawTtl) ? Math.min(3600, Math.max(10, Math.floor(rawTtl))) : 120;
   const expiresAt = new Date(Date.now() + ttl * 1000);
 
   const quote = await prisma.quote.create({

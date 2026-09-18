@@ -20,6 +20,7 @@ import { requireAdmin } from '@/lib/adminAuth';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError } from '@/lib/response';
 import { AppError } from '@/lib/errors';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,8 @@ const schema = z.object({
 export async function PUT(req: NextRequest) {
   try {
     const admin = await requireAdmin(req);
-    const body  = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body  = schema.parse(await readJsonBounded(req));
 
     // Validate rates
     const service = parseFloat(body.serviceFeeRate);
@@ -87,13 +89,11 @@ export async function PUT(req: NextRequest) {
       ),
     );
 
-    await prisma.auditLog.create({
-      data: {
-        action: 'FEE_CONFIG_BULK_UPDATED',
-        entity: 'FeeConfig',
-        actor: `admin:${admin.adminId}`,
-        metadata: JSON.stringify(body),
-      },
+    await audit({
+      action: 'FEE_CONFIG_BULK_UPDATED',
+      entity: 'FeeConfig',
+      actor: `admin:${admin.adminId}`,
+      metadata: body,
     });
 
     return ok({ saved: true, updated: ASSETS.length * TYPES.length });

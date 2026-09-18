@@ -4,7 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { verifyAndFulfillTopUp } from '@/lib/orders';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError } from '@/lib/errors';
-import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
+import { guardPublic } from '@/lib/apiGuard';
+import { qrVisibleForStatus } from '@/lib/privacy';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,16 +30,20 @@ export async function POST(req: NextRequest, { params }: { params: { publicId: s
   return handlePaymentStatus(req, { params });
 }
 
-async function handlePaymentStatus(_req: NextRequest, { params }: { params: { publicId: string } }) {
+async function handlePaymentStatus(req: NextRequest, { params }: { params: { publicId: string } }) {
   try {
     const { publicId } = params;
     if (!publicId || publicId.length > 100) {
       throw new NotFoundError('Order tidak ditemukan');
     }
 
-    const ip = getClientIp(_req);
-    if (!rateLimit('order-payment-status', ip, RATE_LIMITS.public.max, RATE_LIMITS.public.windowMs)) {
-      return ok({ status: 'RATE_LIMITED', message: 'Terlalu sering. Coba lagi nanti.' }, 429);
+    // Per-order bucket (not global per-IP) — prevents rotating publicId to
+    // amplify upstream KiPay GET calls.
+    const g = await guardPublic(req, `payment-status:${publicId}`, 10, 60_000);
+    if (g.response) {
+      const status = g.response.status;
+      if (status === 429) return ok({ status: 'RATE_LIMITED', message: 'Terlalu sering. Coba lagi nanti.' }, 429);
+      return g.response;
     }
 
     const order = await prisma.topUpOrder.findUnique({
@@ -87,7 +92,7 @@ function paymentView(payment: Payment, orderStatus: string) {
     feeAmount: payment.feeAmount,
     netAmount: payment.netAmount,
     provider: payment.provider,
-    qrPayload: ['PAYMENT_PENDING', 'CREATED', 'PAYMENT_CREATE_UNKNOWN'].includes(orderStatus) ? payment.qrPayload : null,
+    qrPayload: qrVisibleForStatus(orderStatus) ? payment.qrPayload : null,
     paidAt: payment.paidAt,
     expiresAt: payment.expiresAt,
   };

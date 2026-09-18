@@ -91,11 +91,22 @@ export const FYAS_SUPPORTED_BANKS = [
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
+const FYAS_ALLOWED_HOSTS = new Set(['ppob.fyas.my.id']);
+
 function getConfig() {
   const apiKey = process.env.FYAS_API_KEY;
-  const baseUrl = (process.env.FYAS_BASE_URL ?? 'https://ppob.fyas.my.id').replace(/\/$/, '');
+  const rawBase = (process.env.FYAS_BASE_URL ?? 'https://ppob.fyas.my.id').replace(/\/$/, '');
   if (!apiKey) throw new Error('FYAS_API_KEY is not configured');
-  return { apiKey, baseUrl };
+  let parsed: URL;
+  try {
+    parsed = new URL(rawBase);
+  } catch {
+    throw new Error('FYAS_BASE_URL is not a valid URL');
+  }
+  if (parsed.protocol !== 'https:' || !FYAS_ALLOWED_HOSTS.has(parsed.hostname)) {
+    throw new Error('FYAS_BASE_URL must be https://ppob.fyas.my.id');
+  }
+  return { apiKey, baseUrl: parsed.toString().replace(/\/$/, '') };
 }
 
 // ─── API helpers ──────────────────────────────────────────────────────────────
@@ -105,6 +116,7 @@ async function fyasRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const { apiKey, baseUrl } = getConfig();
+  if (!path.startsWith('/api/')) throw new Error('[Fyas] unsupported API path');
   const res = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: {
@@ -113,6 +125,7 @@ async function fyasRequest<T>(
       ...(options.headers ?? {}),
     },
     cache: 'no-store',
+    signal: options.signal ?? AbortSignal.timeout(15_000),
   });
 
   const json = (await res.json()) as FyasResponse<T>;
@@ -158,7 +171,7 @@ export async function fyasCreateBankTransfer(opts: {
  * Poll this until status is SUCCESS, FAILED, or REFUNDED.
  */
 export async function fyasGetBankTransfer(refId: string): Promise<FyasBankTransfer> {
-  return fyasRequest<FyasBankTransfer>(`/api/v1/bank-transfers/${refId}`);
+  return fyasRequest<FyasBankTransfer>(`/api/v1/bank-transfers/${encodeURIComponent(refId)}`);
 }
 
 /**

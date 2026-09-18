@@ -11,6 +11,7 @@ import {
 import { getClientIp } from '@/lib/rateLimit';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError } from '@/lib/response';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,15 +77,12 @@ export async function POST(req: NextRequest) {
     });
     const token = await createSessionToken(record.id, nextVersion, jti, uaHash);
 
-    await prisma.auditLog.create({
-      data: {
-        action: 'ADMIN_KEY_ROTATED',
-        entity: 'AdminAccessKey',
-        entityId: record.id,
-        actor: `admin:${session.adminId}`,
-        metadata: JSON.stringify({ keyVersion: nextVersion, via: 'dashboard' }),
-        ipAddress: getClientIp(req),
-      },
+    await audit({
+      action: 'ADMIN_KEY_ROTATED',
+      entity: 'AdminAccessKey',
+      entityId: record.id,
+      actor: `admin:${session.adminId}`,
+      metadata: { keyVersion: nextVersion, via: 'dashboard' },
     });
 
     const res = NextResponse.json({

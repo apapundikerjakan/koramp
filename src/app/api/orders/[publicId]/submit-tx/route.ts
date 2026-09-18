@@ -65,7 +65,8 @@ export async function POST(
       return ok({ stored: false, reason: 'unsupported_network', message: 'Submit manual khusus jaringan EVM (Base/BSC).' });
     }
 
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
     const baseLog = {
       orderId: order.id,
       publicId: order.publicId,

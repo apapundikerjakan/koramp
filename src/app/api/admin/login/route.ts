@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminLogin, getAdminSessionCookie, isTotpEnabled } from '@/lib/adminAuth';
-import { readBoundedBody } from '@/lib/security';
 import { handleError } from '@/lib/response';
 import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 
@@ -40,8 +39,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = JSON.parse(await readBoundedBody(req));
-    const parsed = schema.parse(body);
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const parsed = schema.parse(await readJsonBounded(req));
     const result = await adminLogin(parsed.adminKey, req.headers.get('user-agent') ?? '', parsed.totpCode);
 
     // Set session cookie (10-min sliding, HttpOnly, Secure in prod, SameSite=Lax)
@@ -60,7 +59,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     // Failed attempts feed the escalation engine (async, never blocks response shape).
-    // Client always gets a generic message — never the level/count/algorithm.
+    // Client always gets a generic message — never the level/count/algorithm,
+    // and never whether the key vs TOTP failed (oracle fix).
     try {
       const { handleAdminLoginFailure, approxCountry } = await import('@/lib/security');
       const ip = getClientIp(req);
@@ -73,16 +73,10 @@ export async function POST(req: NextRequest) {
     } catch {
       // Security logging must never break the response.
     }
-    // Jangan expose detail error (TOTP vs key dibedakan hanya untuk UX lokal).
-    if (err instanceof Error && err.message.includes('Invalid admin access key')) {
+    // Generic credential message for both key and TOTP failures.
+    if (err instanceof Error && (err.message.includes('Kredensial admin tidak valid') || err.message.includes('Invalid admin access key') || err.message.includes('authenticator'))) {
       return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Invalid admin access key' } },
-        { status: 401 }
-      );
-    }
-    if (err instanceof Error && err.message.includes('authenticator')) {
-      return NextResponse.json(
-        { error: { code: 'INVALID_TOTP', message: 'Kode authenticator salah atau kedaluwarsa' } },
+        { error: { code: 'UNAUTHORIZED', message: 'Kredensial admin tidak valid' } },
         { status: 401 }
       );
     }

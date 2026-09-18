@@ -17,8 +17,8 @@ import { NotFoundError, AppError } from '@/lib/errors';
 export const dynamic = 'force-dynamic';
 
 const schema = z.object({
-  providerRef: z.string().max(200).optional(),
-  notes: z.string().max(500).optional(),
+  providerRef: z.string().max(200).regex(/^[A-Za-z0-9\-_:. ]*$/, 'providerRef contains invalid characters').optional(),
+  notes: z.string().max(500).regex(/^[^<>]*$/, 'notes must not contain < or >').optional(),
 });
 
 export async function POST(
@@ -27,7 +27,8 @@ export async function POST(
 ) {
   try {
     const admin = await requireAdmin(req);
-    const body = await schema.parseAsync(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = await schema.parseAsync(await readJsonBounded(req));
 
     const order = await prisma.sellOrder.findUnique({
       where: { id: params.id },
@@ -48,19 +49,18 @@ export async function POST(
     await completeSellPayout(order.id, providerRef);
 
     // Extra audit entry for manual confirmation
-    await prisma.auditLog.create({
-      data: {
-        action: 'ADMIN_CONFIRM_PAYOUT',
-        entity: 'SellOrder',
-        entityId: order.id,
-        actor: `admin:${admin.adminId}`,
-        metadata: JSON.stringify({
-          providerRef,
-          notes: body.notes,
-          bankName: order.payoutBankName,
-          accountNumber: order.payoutAccountNumber?.slice(-4),
-          amount: order.totalIdrPayout.toString(),
-        }),
+    const { audit } = await import('@/lib/audit');
+    await audit({
+      action: 'ADMIN_CONFIRM_PAYOUT',
+      entity: 'SellOrder',
+      entityId: order.id,
+      actor: `admin:${admin.adminId}`,
+      metadata: {
+        providerRef,
+        notes: body.notes,
+        bankName: order.payoutBankName,
+        accountLast4: order.payoutAccountNumber?.slice(-4),
+        amount: order.totalIdrPayout.toString(),
       },
     });
 
@@ -70,7 +70,7 @@ export async function POST(
       status: 'COMPLETED',
     });
   } catch (err) {
-    console.error('[AdminConfirmPayout] error:', err);
+    console.error('[AdminConfirmPayout] error:', err instanceof Error ? err.message : 'unknown');
     return handleError(err);
   }
 }

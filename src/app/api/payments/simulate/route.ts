@@ -6,9 +6,11 @@ import { rateLimit, getClientIp } from '@/lib/rateLimit';
 
 export const dynamic = 'force-dynamic';
 
+import { SimulateProviderEnum } from '@/lib/schemas';
+
 const schema = z.object({
   trxId: z.string().min(3).max(100),
-  provider: z.string().min(2).max(50).optional().default('shopeepay'),
+  provider: SimulateProviderEnum.optional().default('shopeepay'),
 });
 
 // Dev/sandbox only — simulate KiPay payment
@@ -27,7 +29,8 @@ export async function POST(req: NextRequest) {
     if (!rateLimit('payments-simulate', ip, 10, 60_000)) {
       return NextResponse.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, { status: 429 });
     }
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
     const result = await kipaySimulate(body.trxId, body.provider);
     return ok({ result });
   } catch (err) { return handleError(err); }

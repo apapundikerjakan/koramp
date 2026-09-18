@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
-import { findIncomingTx, confirmationState, logScan } from '@/lib/blockchain/scan';
+import { findIncomingTx, confirmationState, logScan, sameAddress } from '@/lib/blockchain/scan';
 import { processSellPayout } from '@/lib/orders';
 import { ok, handleError } from '@/lib/response';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
@@ -25,11 +25,6 @@ export const dynamic = 'force-dynamic';
 // Per-order scan throttle: avoid expensive RPC on every browser poll (P12).
 const lastScanAt = new Map<string, number>();
 const SCAN_THROTTLE_MS = 15_000;
-
-function sameAddr(a: string, b: string): boolean {
-  if (a.startsWith('0x') && b.startsWith('0x')) return a.toLowerCase() === b.toLowerCase();
-  return a === b;
-}
 
 export async function POST(
   req: NextRequest,
@@ -78,7 +73,7 @@ export async function POST(
       // Already detected a tx before — just re-check confirmations.
       // Verify stored tx still belongs to this order's wallet (defense in depth).
       txInfo = await bc.getTransaction(txHashToCheck);
-      if (txInfo && !sameAddr(txInfo.from, order.walletAddress)) {
+      if (txInfo && !sameAddress(txInfo.from, order.walletAddress)) {
         console.error(`[poll-deposit] stored tx sender mismatch for order ${order.publicId}: ${txInfo.from} != ${order.walletAddress}`);
         return ok({ polled: true, found: false, status: order.status, reason: 'sender_mismatch' });
       }
@@ -114,7 +109,7 @@ export async function POST(
     }
 
     // Enforce sender binding even if scanner returned without filter (defense in depth).
-    if (!sameAddr(txInfo.from, order.walletAddress)) {
+    if (!sameAddress(txInfo.from, order.walletAddress)) {
       console.error(`[poll-deposit] rejecting tx from wrong wallet for order ${order.publicId}`);
       return ok({ polled: true, found: false, status: order.status, reason: 'sender_mismatch' });
     }

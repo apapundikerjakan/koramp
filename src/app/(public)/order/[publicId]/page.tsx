@@ -3,7 +3,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
-import { CheckCircle2, Circle, Clock, RefreshCw, Copy, ExternalLink, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, RefreshCw, ExternalLink, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { TaskRow, CopyButton, StreamingText, ShimmerText } from '@/components/ui/motion';
+import { getTxExplorerUrl } from '@/lib/assets';
 import clsx from 'clsx';
 
 const ASSET_COLOR: Record<string, string> = {
@@ -20,10 +22,7 @@ const EXPLORER: Record<string, string> = {
 };
 
 function buildExplorerUrl(network: string, txHash: string): string {
-  const base = EXPLORER[network];
-  if (!base) return '';
-  if (network === 'SOLANA') return `${base}${txHash}?cluster=devnet`;
-  return `${base}${txHash}`;
+  return getTxExplorerUrl(network as 'SOLANA' | 'BASE' | 'BSC', txHash);
 }
 
 function fmt(n: string | number) {
@@ -69,18 +68,8 @@ function getStepIndex(steps: typeof TOPUP_STEPS, status: string): number {
 }
 
 function StatusStep({ label, state }: { label: string; state: 'done' | 'active' | 'pending' }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-shrink-0">
-        {state === 'done' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
-        {state === 'active' && <Clock className="w-5 h-5 text-brand-400 animate-pulse" />}
-        {state === 'pending' && <Circle className="w-5 h-5 text-[#2a2a4e]" />}
-      </div>
-      <span className={clsx('text-sm', state === 'done' ? 'text-green-400' : state === 'active' ? 'text-white font-semibold' : 'text-[#2a2a4e]')}>
-        {label}
-      </span>
-    </div>
-  );
+  // TaskRow pattern (Beautiful UI): pending → running → done with row highlight.
+  return <TaskRow label={label} state={state === 'active' ? 'running' : state} />;
 }
 
 export default function OrderStatusPage() {
@@ -91,7 +80,6 @@ export default function OrderStatusPage() {
   const [order, setOrder] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState('');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [scanning, setScanning] = useState(false);
   const [scanMsg, setScanMsg] = useState<string | null>(null);
@@ -180,11 +168,7 @@ export default function OrderStatusPage() {
     };
   }, [fetchOrder, orderStatus, publicId]);
 
-  const copy = (text: string, key: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(key);
-    setTimeout(() => setCopied(''), 2000);
-  };
+  // Copy feedback handled by CopyButton (Copy → Check, 2s reset).
 
   // Manual delivery check — for CRYPTO_PROCESSING orders.
   const checkDeliveryManual = useCallback(async () => {
@@ -262,7 +246,7 @@ export default function OrderStatusPage() {
         <Navbar />
         <div className="max-w-xl mx-auto px-4 py-16 text-center">
           <RefreshCw className="w-8 h-8 text-brand-400 animate-spin mx-auto mb-3" />
-          <p className="text-gray-400">Memuat status order...</p>
+          <p className="text-gray-400"><ShimmerText>Memuat status order...</ShimmerText></p>
         </div>
       </div>
     );
@@ -380,9 +364,7 @@ export default function OrderStatusPage() {
             <p className="text-gray-500 text-xs mb-1">Wallet</p>
             <div className="flex items-center gap-2">
               <p className="text-gray-300 font-mono text-xs flex-1">{shortAddr(order.walletAddress, 10)}</p>
-              <button onClick={() => copy(order.walletAddress, 'wallet')} className="text-gray-600 hover:text-gray-400">
-                {copied === 'wallet' ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
+              <CopyButton text={order.walletAddress} label="Salin alamat wallet" />
             </div>
           </div>
 
@@ -430,9 +412,7 @@ export default function OrderStatusPage() {
             <p className="text-gray-500 text-xs mb-2">Kirim <strong className="text-white">{fmtC(order.cryptoAmount)} {order.asset}</strong> ke alamat berikut:</p>
             <div className="bg-[#07071a] border border-[#1a1a3e] rounded-xl p-3 flex items-center gap-3 mb-2">
               <p className="font-mono text-xs text-white flex-1 break-all">{order.depositAddress}</p>
-              <button onClick={() => copy(order.depositAddress, 'deposit')} className="flex-shrink-0 text-gray-500 hover:text-white">
-                {copied === 'deposit' ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-              </button>
+              <CopyButton text={order.depositAddress} label="Salin alamat deposit" />
             </div>
             <p className="text-red-400 text-xs">⚠ Hanya kirim {order.asset} di jaringan {order.network}.</p>
 
@@ -498,7 +478,7 @@ export default function OrderStatusPage() {
               </div>
               <div>
                 <p className="text-white font-semibold text-sm">Memproses Pengiriman Crypto</p>
-                <p className="text-gray-400 text-xs">Menunggu konfirmasi blockchain. Cek otomatis setiap 8 detik.</p>
+                <p className="text-gray-400 text-xs"><StreamingText text="Menunggu konfirmasi blockchain. Cek otomatis setiap 8 detik." /></p>
               </div>
             </div>
             <button
@@ -522,9 +502,7 @@ export default function OrderStatusPage() {
             <p className="text-gray-500 text-xs mb-2">Transaction Hash</p>
             <div className="flex items-center gap-3">
               <p className="text-gray-300 font-mono text-xs flex-1">{shortHash(order.cryptoTxHash)}</p>
-              <button onClick={() => copy(order.cryptoTxHash, 'tx')} className="text-gray-600 hover:text-gray-400">
-                {copied === 'tx' ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
+              <CopyButton text={order.cryptoTxHash} label="Salin TX hash" />
               {explorerUrl && (
                 <a href={explorerUrl} target="_blank" rel="noopener noreferrer" className="text-brand-400 hover:text-brand-300">
                   <ExternalLink className="w-3.5 h-3.5" />

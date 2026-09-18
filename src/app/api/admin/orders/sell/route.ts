@@ -9,10 +9,11 @@ export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req);
     const url = new URL(req.url);
-    const status = url.searchParams.get('status') ?? undefined;
-    const search = url.searchParams.get('search')?.trim() ?? undefined;
-    const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(50, parseInt(url.searchParams.get('limit') ?? '20', 10));
+    const { parsePagination, SellStatusEnum } = await import('@/lib/schemas');
+    const { page, limit } = parsePagination(url.searchParams);
+    const rawStatus = url.searchParams.get('status') ?? undefined;
+    const status = rawStatus && SellStatusEnum.safeParse(rawStatus).success ? rawStatus : undefined;
+    const search = url.searchParams.get('search')?.trim().slice(0, 100) ?? undefined;
 
     // Build where clause — status filter + optional text search
     const where: Record<string, unknown> = {};

@@ -8,14 +8,18 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError } from '@/lib/errors';
+import { guardPublic } from '@/lib/apiGuard';
+import { maskAccount } from '@/lib/privacy';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { publicId: string } },
 ) {
   try {
+    const g = await guardPublic(req, `payout-status:${params.publicId}`, 30, 60_000);
+    if (g.response) return g.response;
     const order = await prisma.sellOrder.findUnique({
       where: { publicId: params.publicId },
       include: {
@@ -45,9 +49,7 @@ export async function GET(
             status: order.payout.status,
             bankName: order.payout.bankName,
             // Mask account number — show last 4 digits only
-            accountNumber: order.payout.accountNumber
-              ? `****${order.payout.accountNumber.slice(-4)}`
-              : null,
+            accountNumber: maskAccount(order.payout.accountNumber),
             accountName: order.payout.accountName,
             amount: order.payout.amount,
             providerRef: order.payout.providerRef,

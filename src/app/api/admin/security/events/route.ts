@@ -19,11 +19,11 @@ export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req);
     const url = new URL(req.url);
+    const { parsePagination } = await import('@/lib/schemas');
+    const { page, limit } = parsePagination(url.searchParams);
     const severity = url.searchParams.get('severity') ?? undefined;
     const type = url.searchParams.get('type') ?? undefined;
-    const ip = url.searchParams.get('ip')?.trim() || undefined;
-    const page = Math.max(1, parseInt(url.searchParams.get('page') ?? '1', 10));
-    const limit = Math.min(50, Math.max(1, parseInt(url.searchParams.get('limit') ?? '20', 10)));
+    const ip = url.searchParams.get('ip')?.trim().slice(0, 45) || undefined;
 
     const where: Record<string, unknown> = {};
     if (severity && (SEVERITIES as readonly string[]).includes(severity)) where.severity = severity;

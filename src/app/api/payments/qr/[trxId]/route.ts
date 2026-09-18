@@ -42,8 +42,8 @@ export async function GET(req: NextRequest, { params }: { params: { trxId: strin
         'Cache-Control': 'private, max-age=60',
       },
     });
-  } catch (err) {
-    console.error('[QR Proxy]', err);
+  } catch {
+    console.error('[QR Proxy] fetch failed');
     return NextResponse.json({ error: { code: 'INTERNAL_ERROR', message: 'Gagal memuat QR' } }, { status: 500 });
   }
 }

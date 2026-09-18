@@ -28,7 +28,7 @@ export function handleError(err: unknown): NextResponse {
       { status: 400 }
     );
   }
-  console.error('[API Error]', err);
+  console.error('[API Error]', err instanceof Error ? `${err.name}: ${err.message}` : 'unknown');
   return NextResponse.json(
     { error: { code: 'INTERNAL_ERROR', message: 'Terjadi kesalahan. Silakan coba lagi.' } },
     { status: 500 }

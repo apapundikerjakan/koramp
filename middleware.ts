@@ -82,14 +82,17 @@ export async function middleware(req: NextRequest) {
     }
 
     // Sliding refresh: re-issue 10-min token on activity, preserving claims.
+    // Only allowlisted short expiries — arbitrary env values are clamped.
     const configured = process.env.ADMIN_SESSION_EXPIRES_IN ?? '10m';
+    const allowed = new Set(['5m', '10m', '15m']);
+    const expiry = allowed.has(configured) ? configured : '10m';
     const claims: Record<string, unknown> = { adminId, keyVersion };
     if (typeof jti === 'string') claims.jti = jti;
     if (typeof uaHash === 'string') claims.uaHash = uaHash;
     const fresh = await new SignJWT(claims)
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime(configured === '24h' ? '10m' : configured)
+      .setExpirationTime(expiry)
       .sign(secret);
 
     const res = NextResponse.next();

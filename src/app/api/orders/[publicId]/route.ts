@@ -2,13 +2,17 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError } from '@/lib/errors';
+import { guardPublic } from '@/lib/apiGuard';
+import { maskAccount, qrVisibleForStatus } from '@/lib/privacy';
 
 export const dynamic = 'force-dynamic';
 
-// Public order status — no auth needed, uses opaque publicId
-export async function GET(_req: NextRequest, { params }: { params: { publicId: string } }) {
+// Public order status — no auth needed, uses opaque publicId + per-order throttle
+export async function GET(req: NextRequest, { params }: { params: { publicId: string } }) {
   try {
     const { publicId } = params;
+    const g = await guardPublic(req, `order-get:${publicId}`, 30, 60_000);
+    if (g.response) return g.response;
 
     // Try top up
     const topUp = await prisma.topUpOrder.findUnique({
@@ -52,7 +56,7 @@ export async function GET(_req: NextRequest, { params }: { params: { publicId: s
               feeAmount: topUp.payment.feeAmount,
               netAmount: topUp.payment.netAmount,
               provider: topUp.payment.provider,
-              qrPayload: topUp.status === 'PAYMENT_PENDING' || topUp.status === 'CREATED' || topUp.status === 'PAYMENT_CREATE_UNKNOWN'
+              qrPayload: qrVisibleForStatus(topUp.status)
                 ? topUp.payment.qrPayload
                 : null,
               paidAt: topUp.payment.paidAt,
@@ -90,9 +94,7 @@ export async function GET(_req: NextRequest, { params }: { params: { publicId: s
         depositAddress: sell.depositAddress,
         payoutBankName: sell.payoutBankName,
         // Mask account number for security
-        payoutAccountNumber: sell.payoutAccountNumber
-          ? `****${sell.payoutAccountNumber.slice(-4)}`
-          : null,
+        payoutAccountNumber: maskAccount(sell.payoutAccountNumber),
         payoutAccountName: sell.payoutAccountName,
         status: sell.status,
         failureReason: sell.failureReason,

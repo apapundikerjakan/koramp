@@ -11,9 +11,10 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
-import { findIncomingTx, confirmationState, logScan } from '@/lib/blockchain/scan';
+import { findIncomingTx, confirmationState, logScan, sameAddress } from '@/lib/blockchain/scan';
 import { processSellPayout } from '@/lib/orders';
 import { ok } from '@/lib/response';
+import { guardCron } from '@/lib/apiGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,19 +25,9 @@ const BATCH_LIMIT = 20;
 //  operasi tetap idempotent sehingga overlap hanya buang RPC, tak merusak data.)
 let running = false;
 
-function sameAddr(a: string, b: string): boolean {
-  if (a.startsWith('0x') && b.startsWith('0x')) return a.toLowerCase() === b.toLowerCase();
-  return a === b;
-}
-
 export async function GET(req: NextRequest) {
-  const secret = process.env.CRON_SECRET?.trim();
-  if (secret) {
-    const auth = req.headers.get('authorization') ?? '';
-    if (auth !== `Bearer ${secret}`) {
-      return ok({ ok: false, error: 'unauthorized' });
-    }
-  }
+  const denied = guardCron(req);
+  if (denied) return denied;
 
   // Overlap guard (§24): satu proses satu eksekusi.
   if (running) {
@@ -80,7 +71,7 @@ async function runScan() {
       if (order.cryptoTxHash) {
         // Prioritas 1 (§16): hash diketahui → lacak hash, JANGAN scan address.
         txInfo = await bc.getTransaction(order.cryptoTxHash);
-        if (txInfo && !sameAddr(txInfo.from, order.walletAddress)) continue;
+        if (txInfo && !sameAddress(txInfo.from, order.walletAddress)) continue;
         // FAILED tidak diproses (§8).
         if (txInfo && (txInfo.txStatus === 'FAILED' || txInfo.receiptStatus === 0)) {
           logScan('cron_tx_failed', {
@@ -103,7 +94,7 @@ async function runScan() {
         });
       }
       if (!txInfo) continue;
-      if (!sameAddr(txInfo.from, order.walletAddress)) continue;
+      if (!sameAddress(txInfo.from, order.walletAddress)) continue;
 
       const reused = await prisma.sellOrder.findFirst({
         where: { cryptoTxHash: txInfo.txHash, id: { not: order.id } },

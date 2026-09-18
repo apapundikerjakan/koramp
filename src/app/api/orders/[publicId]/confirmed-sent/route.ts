@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
+import { sameAddress } from '@/lib/blockchain/scan';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError, OrderStateError } from '@/lib/errors';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { audit } from '@/lib/audit';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -38,7 +40,13 @@ export async function POST(req: NextRequest, { params }: { params: { publicId: s
       throw new OrderStateError(`Order berstatus ${order.status}, bukan AWAITING_CRYPTO`);
     }
 
-    const body = schema.parse(await req.json().catch(() => ({})));
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const rawBody = await readJsonBounded(req).catch(() => ({}));
+    // Strict txHash format: EVM 0x+64hex or Solana base58 32-44 chars.
+    const strictSchema = z.object({
+      txHash: z.string().regex(/^(0x[0-9a-fA-F]{64}|[1-9A-HJ-NP-Za-km-z]{32,44})$/).optional(),
+    });
+    const body = strictSchema.parse(rawBody);
 
     // Only store txHash after on-chain verification (sender must match order wallet).
     // FAILED txs are rejected outright (§8) — never stored.
@@ -51,26 +59,22 @@ export async function POST(req: NextRequest, { params }: { params: { publicId: s
       if (txInfo.txStatus === 'FAILED' || txInfo.receiptStatus === 0) {
         throw new OrderStateError('Transaksi GAGAL di blockchain — tidak bisa dipakai');
       }
-      const same = body.txHash.startsWith('0x') || txInfo.from.startsWith('0x')
-        ? txInfo.from.toLowerCase() === order.walletAddress.toLowerCase()
-        : txInfo.from === order.walletAddress;
-      if (!same) {
+      if (!sameAddress(txInfo.from, order.walletAddress)) {
         throw new OrderStateError('txHash bukan dari wallet order ini');
       }
+      // Store canonical on-chain hash (checksum-normalized), not raw user input.
       await prisma.sellOrder.update({
         where: { publicId: params.publicId },
-        data: { cryptoTxHash: body.txHash },
+        data: { cryptoTxHash: txInfo.txHash },
       });
     }
 
-    await prisma.auditLog.create({
-      data: {
-        action: 'USER_CONFIRMED_SENT',
-        entity: 'SellOrder',
-        entityId: order.id,
-        actor: order.walletAddress,
-        metadata: JSON.stringify({ txHash: body.txHash ?? null }),
-      },
+    await audit({
+      action: 'USER_CONFIRMED_SENT',
+      entity: 'SellOrder',
+      entityId: order.id,
+      actor: order.walletAddress,
+      metadata: { txHash: body.txHash ?? null },
     });
 
     return ok({ message: 'Dicatat. Kami akan verifikasi transaksi secara independen di blockchain.' });

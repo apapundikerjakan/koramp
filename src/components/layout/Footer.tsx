@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { QrCode } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -17,6 +18,10 @@ export function Footer() {
               Hubungkan wallet — tanpa daftar akun.
             </p>
             <p className="text-gray-700 text-xs mt-3">SOL · ETH (Base) · BNB</p>
+            <span className="inline-flex items-center gap-1.5 mt-4 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+              <QrCode className="w-3 h-3" aria-hidden />
+              Powered by KiPay QRIS
+            </span>
           </div>
           <div>
             <p className="text-gray-400 font-semibold text-sm mb-3">Produk</p>

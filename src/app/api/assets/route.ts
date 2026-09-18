@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { handleError } from '@/lib/response';
-import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { handleError, ok } from '@/lib/response';
+import { guardPublic } from '@/lib/apiGuard';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const ip = getClientIp(req);
-    if (!rateLimit('assets', ip, 60, 60_000)) {
-      return NextResponse.json({ error: { code: 'RATE_LIMITED', message: 'Too many requests' } }, { status: 429 });
-    }
+    const g = await guardPublic(req, 'assets', 60, 60_000);
+    if (g.response) return g.response;
     const assets = await prisma.asset.findMany({
       where: { isActive: true },
       include: { network: true },

@@ -15,7 +15,7 @@
  * Use redactKipayUrl() before logging.
  */
 
-import { createHmac } from 'crypto';
+import { createHmac, timingSafeEqual } from 'crypto';
 
 // ─── Transaction types ────────────────────────────────────────────────────────
 
@@ -171,12 +171,14 @@ export function verifyKipayWebhookSignature(
     .digest('hex')}`;
 
   // Constant-time comparison to prevent timing attacks.
-  if (expected.length !== signature.length) return 'invalid';
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  try {
+    const a = Buffer.from(expected, 'utf8');
+    const b = Buffer.from(signature, 'utf8');
+    if (a.length !== b.length) return 'invalid';
+    return timingSafeEqual(a, b) ? 'ok' : 'invalid';
+  } catch {
+    return 'invalid';
   }
-  return diff === 0 ? 'ok' : 'invalid';
 }
 
 // ─── Error types ──────────────────────────────────────────────────────────────

@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
     const quote = await createQuote('TOP_UP', body.asset, body.network, body.idrAmount);
     return ok({ quote });
   } catch (err) { return handleError(err); }

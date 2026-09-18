@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createSellOrder } from '@/lib/orders';
 import { ok, handleError } from '@/lib/response';
-import { ValidationError } from '@/lib/errors';
-import { getBlockchainProvider } from '@/lib/blockchain';
-import { validateAssetNetwork, getWalletEcosystem } from '@/lib/assets';
 import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { assertWalletForOrder } from '@/lib/validateWallet';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,18 +49,10 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const body = schema.parse(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = schema.parse(await readJsonBounded(req));
 
-    if (!validateAssetNetwork(body.asset, body.network)) {
-      throw new ValidationError(`Asset ${body.asset} tidak cocok dengan network ${body.network}`);
-    }
-    if (body.walletType !== getWalletEcosystem(body.asset)) {
-      throw new ValidationError(`Wallet type ${body.walletType} tidak cocok untuk asset ${body.asset}`);
-    }
-    const bc = getBlockchainProvider(body.network);
-    if (!bc.isValidAddress(body.walletAddress)) {
-      throw new ValidationError(`Alamat wallet tidak valid untuk network ${body.network}`);
-    }
+    assertWalletForOrder({ asset: body.asset, network: body.network, walletType: body.walletType, walletAddress: body.walletAddress });
 
     const result = await createSellOrder(body);
     return ok({ order: result.order }, 201);

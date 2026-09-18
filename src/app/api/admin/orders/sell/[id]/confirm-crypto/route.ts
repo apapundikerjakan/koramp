@@ -6,7 +6,7 @@ import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
 import { processSellPayout } from '@/lib/orders';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError, AppError } from '@/lib/errors';
-import { findIncomingTx } from '@/lib/blockchain/scan';
+import { findIncomingTx, sameAddress } from '@/lib/blockchain/scan';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,15 +15,11 @@ const schema = z.object({
   txHash: z.string().min(1).max(200).optional(),
 });
 
-function sameAddr(a: string, b: string): boolean {
-  if (a.startsWith('0x') && b.startsWith('0x')) return a.toLowerCase() === b.toLowerCase();
-  return a === b;
-}
-
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const admin = await requireAdmin(req);
-    const body = await schema.parseAsync(await req.json());
+    const { readJsonBounded } = await import('@/lib/apiGuard');
+    const body = await schema.parseAsync(await readJsonBounded(req));
 
     const order = await prisma.sellOrder.findUnique({ where: { id: params.id } });
     if (!order) throw new NotFoundError('Order tidak ditemukan');
@@ -62,12 +58,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     // Verify destination matches deposit address
-    if (!sameAddr(txInfo.to, order.depositAddress)) {
+    if (!sameAddress(txInfo.to, order.depositAddress)) {
       throw new AppError(422, 'WRONG_DESTINATION', 'Transaksi bukan ke alamat deposit order ini');
     }
 
     // Verify sender == order.walletAddress (P10 — prevents spoofing via shared wallet).
-    if (!sameAddr(txInfo.from, order.walletAddress)) {
+    if (!sameAddress(txInfo.from, order.walletAddress)) {
       throw new AppError(422, 'WRONG_SENDER',
         `Pengirim tidak sesuai: ${txInfo.from} != order wallet ${order.walletAddress}`);
     }
@@ -87,8 +83,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     // Check confirmations
-    const requiredConfs = order.requiredConfirmations ??
-      (order.assetSymbol === 'SOL' ? 32 : order.assetSymbol === 'ETH' ? 12 : 15);
+    const { getRequiredConfirmations } = await import('@/lib/validateWallet');
+    const requiredConfs = getRequiredConfirmations(order.network as NetworkId, order.assetSymbol, order.requiredConfirmations);
     if (txInfo.confirmations < requiredConfs) {
       throw new AppError(422, 'NOT_ENOUGH_CONFIRMATIONS',
         `Transaksi perlu ${requiredConfs} konfirmasi, saat ini ${txInfo.confirmations}`);
@@ -155,7 +151,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       autoScanned: !body.txHash,
     });
   } catch (err) {
-    console.error('[AdminConfirmCrypto] Error:', err);
+    console.error('[AdminConfirmCrypto] Error:', err instanceof Error ? err.message : 'unknown');
     return handleError(err);
   }
 }

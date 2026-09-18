@@ -3,7 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError } from '@/lib/errors';
-import { rateLimit, getClientIp } from '@/lib/rateLimit';
+import { guardPublic } from '@/lib/apiGuard';
+import { audit } from '@/lib/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,12 +23,12 @@ export async function POST(
   { params }: { params: { publicId: string } },
 ) {
   try {
-    const ip = getClientIp(req);
-    if (!rateLimit('check-delivery', ip, 6, 60_000)) {
-      return ok({ status: 'RATE_LIMITED' }, 429);
-    }
-
     const { publicId } = params;
+    const g = await guardPublic(req, `check-delivery:${publicId}`, 6, 60_000);
+    if (g.response) {
+      if (g.response.status === 429) return ok({ status: 'RATE_LIMITED' }, 429);
+      return g.response;
+    }
     if (!publicId || publicId.length > 100) throw new NotFoundError('Order tidak ditemukan');
 
     const order = await prisma.topUpOrder.findUnique({

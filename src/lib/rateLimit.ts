@@ -83,17 +83,36 @@ class InMemoryRateLimitBackend implements RateLimitBackend {
 export const rateLimiter: RateLimitBackend = new InMemoryRateLimitBackend();
 
 /**
- * Extract client IP without blindly trusting x-forwarded-for.
+ * Extract client IP — hardened against X-Forwarded-For spoofing.
  *
- * - Takes the FIRST IP from x-forwarded-for (client → proxies chain).
- * - Trims whitespace, drops empty/unknown values.
- * - Falls back to x-real-ip.
- * - NOTE: only trust these headers when deployed behind a known proxy/CDN
- *   (Vercel, Cloudflare). In production, configure trusted proxies and
- *   consider using platform-provided IP (e.g. Vercel's x-vercel-forwarded-for).
+ * Priority (first match wins):
+ *  1. Platform-verified headers set by infra (cannot be spoofed by client
+ *     when deployed behind that platform): cf-connecting-ip (Cloudflare),
+ *     x-vercel-forwarded-for (Vercel), fastly-client-ip.
+ *  2. x-real-ip (set by trusted reverse proxy).
+ *  3. X-Forwarded-For selected via TRUSTED_PROXY_COUNT (default 0 = first
+ *     entry, single-proxy/Vercel style). Configure TRUSTED_PROXY_COUNT to
+ *     match the deployment proxy chain; with untrusted direct traffic XFF
+ *     is client-controlled and must not be solely trusted for bans.
  */
 export function getClientIp(req: NextRequest | Request): string {
   const headers = req.headers;
+  const pick = (v: string | null): string | null => {
+    if (!v) return null;
+    const t = v.trim();
+    if (!t || t.toLowerCase() === 'unknown') return null;
+    // Basic IP sanity — prevents header-injection garbage becoming a bucket key.
+    if (/^[0-9a-fA-F.:]{3,45}$/.test(t)) return t;
+    return null;
+  };
+  // 1. Platform-verified single-IP headers.
+  for (const h of ['cf-connecting-ip', 'x-vercel-forwarded-for', 'fastly-client-ip']) {
+    const v = pick(headers.get(h)?.split(',')[0]?.trim() ?? null);
+    if (v) return v;
+  }
+  // 2. Reverse-proxy header.
+  const realIp = pick(headers.get('x-real-ip'));
+  // 3. XFF chain.
   const xff = headers.get('x-forwarded-for');
   // Trusted-proxy aware: TRUSTED_PROXY_COUNT=N means N trusted hops, so the
   // client is entry len-N-1. Default 0: first entry (single-proxy/Vercel style).
@@ -103,17 +122,17 @@ export function getClientIp(req: NextRequest | Request): string {
   if (xff) {
     const parts = xff.split(',').map((s) => s.trim()).filter(Boolean);
     if (parts.length) {
+      let candidate: string | undefined;
       if (Number.isFinite(hops) && hops > 0 && parts.length > hops) {
-        const candidate = parts[parts.length - 1 - hops];
-        if (candidate && candidate.toLowerCase() !== 'unknown') return candidate;
+        candidate = parts[parts.length - 1 - hops];
       } else {
-        const first = parts[0];
-        if (first && first.toLowerCase() !== 'unknown') return first;
+        candidate = parts[0];
       }
+      const v = candidate ? pick(candidate) : null;
+      if (v) return v;
     }
   }
-  const realIp = headers.get('x-real-ip')?.trim();
-  if (realIp && realIp.toLowerCase() !== 'unknown') return realIp;
+  if (realIp) return realIp;
   return 'unknown';
 }
 
@@ -150,9 +169,9 @@ export function getRateLimitRemaining(
 
 // Preset limits per endpoint type (P21 audit).
 export const RATE_LIMITS = {
-  // Login admin: longgar (30/15 mnt) — kunci 256-bit tak mungkin di-brute-force,
-  // limit hanya meredam probing kunci-bocor + boros query DB. Jangan dihapus total.
-  adminLogin: { max: 30, windowMs: 15 * 60 * 1000 },
+  // Login admin: strict (10/15 mnt) — TOTP 6-digit space + IP-spoof hardening.
+  // Previously 30/15m; tightened to bound TOTP guessing with rotated IPs.
+  adminLogin: { max: 10, windowMs: 15 * 60 * 1000 },
   quote: { max: 30, windowMs: 60_000 },
   orderCreate: { max: 10, windowMs: 60_000 },
   walletValidate: { max: 30, windowMs: 60_000 },
