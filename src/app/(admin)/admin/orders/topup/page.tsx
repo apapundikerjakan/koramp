@@ -28,7 +28,8 @@ interface Order {
   walletAddress: string;
   payment?: {
     status: string;
-    kipayTrxId: string | null;
+    providerOrderId: string | null;
+    providerStatus: string | null;
     grossAmount: string | number;
     requestedAmount: string | number;
     uniqueCode: number | null;

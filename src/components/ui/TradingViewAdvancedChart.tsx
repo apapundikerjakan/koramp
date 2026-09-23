@@ -108,10 +108,10 @@ function ChartHost({ symbol }: { symbol: AssetSymbol }) {
     return (
       <div className="h-full w-full flex flex-col items-center justify-center gap-3 px-6 text-center">
         <Activity className="w-8 h-8 text-ink-muted" aria-hidden />
-        <p className="text-ink-secondary text-sm font-semibold">Grafik tidak dapat dimuat</p>
+        <p className="text-ink-secondary text-sm font-semibold">Grafik IDR tidak dapat dimuat</p>
         <p className="text-ink-muted text-xs leading-relaxed">
           Koneksi ke TradingView diblokir atau terputus. Order tetap bisa dilanjutkan
-          dengan kurs live Kipramp.
+          dengan kurs live KORAMP.
         </p>
         <div className="flex items-center gap-2 mt-1">
           <button
@@ -142,7 +142,7 @@ function ChartHost({ symbol }: { symbol: AssetSymbol }) {
       id={hostId}
       className="tradingview-widget-container h-full w-full"
       role="region"
-      aria-label={`Grafik lengkap ${symbol} (USDT)`}
+      aria-label={`Grafik lengkap ${symbol} dalam IDR`}
     />
   );
 }
@@ -154,8 +154,8 @@ export function TradingViewTerminalChart({ symbol }: { symbol: AssetSymbol }) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-line">
         <span className="inline-flex items-center gap-2 text-sm">
           <TokenIcon symbol={symbol} size={18} />
-          <span className="text-ink-primary font-semibold">{symbol} / USDT</span>
-          <span className="text-ink-muted text-xs hidden sm:inline">· referensi global</span>
+          <span className="text-ink-primary font-semibold">{symbol} / IDR</span>
+          <span className="text-ink-muted text-xs hidden sm:inline">TradingView · IDR reference</span>
         </span>
         <span className="inline-flex items-center gap-1.5 text-xs text-ink-secondary">
           <span className="w-1.5 h-1.5 rounded-full bg-[#4CAF6D] animate-pulse" aria-hidden />
@@ -165,7 +165,7 @@ export function TradingViewTerminalChart({ symbol }: { symbol: AssetSymbol }) {
 
       {/* Explicit height BEFORE the embed script runs (mobile capped,
           desktop follows the viewport under the sticky Navbar). */}
-      <div className="h-64 lg:h-[calc(100vh-13rem)]">
+      <div className="h-72 lg:h-[clamp(32.5rem,calc(100vh-15rem),40.625rem)]">
         <ChartHost key={symbol} symbol={symbol} />
       </div>
 

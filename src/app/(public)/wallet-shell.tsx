@@ -1,6 +1,8 @@
 'use client';
 
 import { WalletProviders } from '@/providers/WalletProviders';
+import { PublicLoader } from './PublicLoader';
+import { CookieConsent } from '@/components/ui/CookieConsent';
 
 /**
  * Client-only mount point for the wallet graph.
@@ -11,5 +13,11 @@ import { WalletProviders } from '@/providers/WalletProviders';
  * "Element type is invalid: got undefined", dev and prod, pre-existing).
  */
 export function WalletShell({ children }: { children: React.ReactNode }) {
-  return <WalletProviders>{children}</WalletProviders>;
+  return (
+    <WalletProviders>
+      <PublicLoader />
+      <CookieConsent />
+      {children}
+    </WalletProviders>
+  );
 }

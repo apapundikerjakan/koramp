@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { useWallet } from '@/contexts/WalletContext';
 import { ArrowRight, AlertTriangle, Clock, CheckCircle2, RefreshCw, Copy, Info, ExternalLink } from 'lucide-react';
@@ -10,11 +10,12 @@ import { toast } from 'sonner';
 import clsx from 'clsx';
 import { CHAIN_NAMES, getTxExplorerUrl } from '@/lib/assets';
 import { SummaryPanel } from '@/components/order/SummaryPanel';
+import { QrCodeCanvas } from '@/components/ui/QrCodeCanvas';
 import { TerminalGrid, ChartPanelSkeleton, ChartToggleButton, useChartToggle } from '@/components/order/TerminalLayout';
 import { DEFAULT_CHART_ASSET } from '@/lib/tradingView';
 import { TokenIcon } from '@/components/ui/TokenIcon';
 import {
-  StepIndicator, QrFrame, ToolChip, StreamingText,
+  QrFrame, ToolChip, StreamingText,
   AnimatedCounter, ParticleBurst, ShimmerText,
 } from '@/components/ui/motion';
 
@@ -44,9 +45,16 @@ export default function TopUpPage() {
   const router = useRouter();
   const { address, evmAddress, evmChainId, solAddress, isConnected, setShowConnectModal, openEvmModal, isCorrectNetworkForAsset, ensureChainForAsset } = useWallet();
 
-  const [step, setStep] = useState<Step>('asset');
-  const [asset, setAsset] = useState<Asset | null>(null);
-  const [idrInput, setIdrInput] = useState('');
+  const searchParams = useSearchParams();
+  const queryAsset = searchParams.get('asset');
+  const queryAmount = searchParams.get('amount') ?? '';
+  const handoffAsset: Asset | null =
+    queryAsset === 'SOL' || queryAsset === 'ETH' || queryAsset === 'BNB' ? queryAsset : null;
+  const hasHandoff = handoffAsset !== null && queryAmount !== '' && Number(queryAmount) > 0;
+
+  const [step, setStep] = useState<Step>(hasHandoff ? 'amount' : 'asset');
+  const [asset, setAsset] = useState<Asset | null>(handoffAsset);
+  const [idrInput, setIdrInput] = useState(hasHandoff ? queryAmount : '');
   const [quote, setQuote] = useState<any>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [order, setOrder] = useState<any>(null);
@@ -107,7 +115,7 @@ export default function TopUpPage() {
   }, [quote?.expiresAt, step, autoRefreshQuote]);
 
   // Auto-poll order status when in payment step.
-  // Uses /payment-status to trigger server-to-server KiPay verification —
+  // Uses /payment-status to trigger server-to-server TransFi verification —
   // not just a DB read. This is essential when webhook cannot reach localhost
   // (development) or when webhook delivery is delayed.
   useEffect(() => {
@@ -115,7 +123,7 @@ export default function TopUpPage() {
 
     const poll = async () => {
       try {
-        // payment-status triggers a server-side GET to KiPay, then updates DB.
+        // payment-status triggers a server-side GET to TransFi, then updates DB.
         const res = await fetch(`/api/orders/${order.publicId}/payment-status`);
         const data = await res.json();
         const status = data.status ?? order.status;
@@ -135,10 +143,11 @@ export default function TopUpPage() {
     const schedule = () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = setInterval(poll, pollBackoffRef.current);
-      pollBackoffRef.current = Math.min(10000, pollBackoffRef.current + 500);
+      pollBackoffRef.current = Math.min(15000, pollBackoffRef.current + 1000);
     };
 
-    pollBackoffRef.current = 3000;
+    // Mulai 6s (= limit payment-status 10/min) lalu backoff ke 15s.
+    pollBackoffRef.current = 6000;
     poll();
     schedule();
 
@@ -170,7 +179,8 @@ export default function TopUpPage() {
     };
 
     check(); // immediate first check
-    deliveryIntervalRef.current = setInterval(check, 8000);
+    // 12s = 5 req/min, di bawah limit check-delivery 6/min.
+    deliveryIntervalRef.current = setInterval(check, 12000);
 
     return () => {
       if (deliveryIntervalRef.current) {
@@ -196,6 +206,17 @@ export default function TopUpPage() {
     } catch { toast.error('Gagal terhubung ke server'); }
     finally { setQuoteLoading(false); }
   };
+
+  // Handoff from /topup-sell (?asset=&amount=): fetch a fresh quote on mount
+  // and land directly on confirm. Fresh quote avoids expiry races.
+  const handoffRef = useRef(hasHandoff);
+  useEffect(() => {
+    if (handoffRef.current) {
+      handoffRef.current = false;
+      void getQuote();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createOrder = async () => {
     if (!quote || !asset) return;
@@ -230,14 +251,14 @@ export default function TopUpPage() {
     finally { setSubmitting(false); }
   };
 
-  const simulatePay = async () => {
-    if (!payment?.kipayTrxId) return;
+  const simulatePay = async (status: 'fund_deposited' | 'asset_settled' = 'fund_deposited') => {
+    if (!order?.publicId) return;
     setSubmitting(true);
     try {
       const res = await fetch('/api/payments/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trxId: payment.kipayTrxId }),
+        body: JSON.stringify({ orderPublicId: order.publicId, status }),
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error?.message ?? 'Simulasi gagal'); return; }
@@ -267,39 +288,25 @@ export default function TopUpPage() {
     : address;
   const resolvedWalletType = asset ? ASSET_INFO[asset].walletType : null;
 
-  const STEPS: Step[] = ['asset', 'amount', 'confirm', 'payment', 'success'];
-  const stepIdx = STEPS.indexOf(step);
-
   return (
-    <div className="min-h-screen bg-base">
+    <div className="h-dvh flex flex-col overflow-hidden bg-base">
       <Navbar />
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
+      <div className="flex-1 min-h-0 mx-auto w-full max-w-[1600px] px-4 sm:px-6 py-3 sm:py-4 flex flex-col">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="mb-3 flex-shrink-0">
+          <div className="flex items-center justify-between gap-3 mb-0.5">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-brand-600/20 rounded-xl flex items-center justify-center">
+              <div className="w-8 h-8 bg-brand-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
                 <span className="text-brand-400 font-black">↑</span>
               </div>
-              <h1 className="text-2xl font-black text-white">Top Up Crypto</h1>
+              <h1 className="text-xl font-black text-white">Top Up Crypto</h1>
             </div>
             {isChartStep && <ChartToggleButton open={chartOpen} onToggle={toggleChart} />}
           </div>
-          <p className="text-gray-500 text-sm pl-12">IDR → Crypto. Bayar dengan <span className="text-brand-400 font-semibold">QRIS</span> — GoPay, OVO, ShopeePay, m-banking.</p>
+          <p className="text-gray-500 text-xs sm:pl-11 hidden sm:block">IDR → Crypto. Bayar dengan <span className="text-brand-400 font-semibold">QRIS</span> — GoPay, OVO, ShopeePay, m-banking.</p>
         </div>
 
-        {/* Step indicator */}
-        {step !== 'success' && (
-          <StepIndicator
-            steps={[
-              { key: 'asset', label: 'Aset' },
-              { key: 'amount', label: 'Nominal' },
-              { key: 'confirm', label: 'Konfirmasi' },
-              { key: 'payment', label: 'Bayar' },
-            ]}
-            current={Math.min(stepIdx, 3)}
-          />
-        )}
+        <div className="flex-1 min-h-0 flex flex-col">
 
         {/* ── STEP: ASSET ─────────────────────────────────────── */}
         {step === 'asset' && (
@@ -472,7 +479,7 @@ export default function TopUpPage() {
 
         {/* ── STEP: PAYMENT ────────────────────────────────── */}
         {step === 'payment' && order && payment && (
-          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full">
+          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full h-full min-h-0 overflow-y-auto pb-4">
             <div className="text-center">
               <div className="w-14 h-14 bg-yellow-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
                 <Clock className="w-7 h-7 text-yellow-400 animate-pulse" />
@@ -496,16 +503,17 @@ export default function TopUpPage() {
               <ToolChip state="running">Menunggu pembayaran...</ToolChip>
             </div>
 
-            {/* QRIS Image */}
-            <QrFrame waiting={!qrError} confirmed={false} caption="Powered by KiPay · QRIS">
-              {!qrError ? (
-                <img
-                  src={`/api/payments/qr/${payment.kipayTrxId}`}
-                  alt="QRIS Kipramp"
-                  width={240} height={240}
-                  className="block"
-                  onError={() => setQrError(true)}
-                />
+            {/* QRIS Image — rendered from TransFi QR string (client-side) */}
+            <QrFrame waiting={!qrError} confirmed={false} caption="Powered by TransFi · QRIS">
+              {!qrError && payment.qrPayload ? (
+                <QrCodeCanvas payload={payment.qrPayload} />
+              ) : !qrError && payment.payUrl ? (
+                <div className="w-60 min-h-60 flex flex-col items-center justify-center gap-3 text-gray-300 p-6 text-center">
+                  <p className="text-sm">Selesaikan pembayaran di halaman TransFi</p>
+                  <a href={payment.payUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-400 underline">
+                    Buka halaman pembayaran →
+                  </a>
+                </div>
               ) : (
                 <div className="w-60 h-60 flex flex-col items-center justify-center gap-2 text-gray-400">
                   <p className="text-sm text-center">QR belum tersedia</p>
@@ -546,7 +554,7 @@ export default function TopUpPage() {
             </div>              <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-2">
               <Info className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" />
               <p className="text-blue-300 text-xs">
-                Bayar <strong>tepat</strong> sesuai nominal di atas (termasuk kode unik).
+                Bayar <strong>tepat</strong> sesuai nominal di atas.
                 Status diperbarui otomatis setelah konfirmasi. Jangan tutup halaman ini.
               </p>
             </div>
@@ -575,17 +583,23 @@ export default function TopUpPage() {
 
             {/* Dev sandbox simulate */}
             {process.env.NODE_ENV !== 'production' && (
-              <button className="w-full py-2 px-4 rounded-xl border border-yellow-600/30 bg-yellow-600/10 text-yellow-400 text-xs font-semibold"
-                disabled={submitting} onClick={simulatePay}>
-                {submitting ? 'Memproses...' : '🧪 [Sandbox] Simulasi Pembayaran'}
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <button className="py-2 px-4 rounded-xl border border-yellow-600/30 bg-yellow-600/10 text-yellow-400 text-xs font-semibold disabled:opacity-50"
+                  disabled={submitting} onClick={() => { void simulatePay('fund_deposited'); }}>
+                  {submitting ? 'Memproses...' : '🧪 [Sandbox] Simulasi Bayar'}
+                </button>
+                <button className="py-2 px-4 rounded-xl border border-yellow-600/30 bg-yellow-600/10 text-yellow-400 text-xs font-semibold disabled:opacity-50"
+                  disabled={submitting} onClick={() => { void simulatePay('asset_settled'); }}>
+                  {submitting ? 'Memproses...' : '🧪 [Sandbox] Simulasi Settlement'}
+                </button>
+              </div>
             )}
           </div>
         )}
 
         {/* ── STEP: SUCCESS ─────────────────────────────────── */}
         {step === 'success' && (
-          <div className="relative text-center space-y-5 animate-fade-in max-w-lg mx-auto w-full">
+          <div className="relative text-center space-y-5 animate-fade-in max-w-lg mx-auto w-full h-full min-h-0 overflow-y-auto pb-4">
             {cryptoConfirmed && <ParticleBurst />}
             <div className={clsx(
               'w-20 h-20 rounded-full flex items-center justify-center mx-auto',
@@ -660,6 +674,7 @@ export default function TopUpPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ const schema = z.object({
   path: z.string().min(1).max(120),
 });
 
-const ALLOWED = [/^\/$/, /^\/topup$/, /^\/sell$/, /^\/order\/[A-Za-z0-9_-]{1,100}$/];
+const ALLOWED = [/^\/$/, /^\/topup-sell$/, /^\/topup$/, /^\/sell$/, /^\/order\/[A-Za-z0-9_-]{1,100}$/];
 
 function normalizePath(raw: string): string | null {
   const noQuery = raw.split('?')[0].split('#')[0];
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
     const ip = fwd && /^[0-9a-fA-F.:]{3,45}$/.test(fwd)
       ? fwd
       : (req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown');
-    if (!rateLimit('visits', ip, 300, 60_000, { flood: false })) {
+    if (!(await rateLimit('visits', ip, 300, 60_000, { flood: false }))) {
       return ok({});
     }
 

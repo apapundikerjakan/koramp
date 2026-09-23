@@ -1,5 +1,5 @@
 /**
- * Kipramp Pricing Engine
+ * KORAMP Pricing Engine
  *
  * ═══════════════════════════════════════════════════════════
  * FEE STRUCTURE — 3 POTONGAN, SAMA UNTUK TOP UP & SELL
@@ -127,7 +127,7 @@ export async function createQuote(
   try {
     marketPrice = await getLivePrice(asset, prisma);
   } catch (e) {
-    throw new AppError(503, 'PRICE_UNAVAILABLE', 'Harga pasar tidak tersedia — coba lagi sebentar');
+    throw new AppError(503, 'PRICE_UNAVAILABLE', 'Harga pasar tidak tersedia. Coba lagi sebentar');
   }
 
   const assetRecord = await prisma.asset.findUnique({ where: { symbol: asset } });

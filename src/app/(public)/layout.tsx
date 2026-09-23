@@ -20,25 +20,11 @@ const WalletShell = dynamicLoader(
   () => import('./wallet-shell').then((m) => ({ default: m.WalletShell })),
   {
     ssr: false,
+    // Splash minimal tanpa logo lama — PublicLoader mengambil alih
+    // segera setelah shell ter-mount.
     loading: () => (
-      <div className="min-h-screen bg-base">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#C7A048] to-[#1F5C43] rounded-lg flex items-center justify-center">
-                <span className="text-white font-black text-sm">K</span>
-              </div>
-              <span className="text-white font-bold text-xl tracking-tight">Kipramp</span>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-2xl mx-auto px-4 py-24 text-center">
-          <h1 className="font-display font-black text-ink-primary text-4xl mb-4">
-            Tukar <span className="font-black text-[#C7A048]">Rupiah</span> jadi crypto
-          </h1>
-          <p className="text-ink-secondary mb-8">Loket digital Rupiah ⇄ crypto — tanpa daftar akun.</p>
-          <p className="text-ink-muted text-sm animate-pulse" role="status">Memuat aplikasi…</p>
-        </div>
+      <div className="min-h-screen bg-[#08080A] flex items-center justify-center">
+        <p className="font-bold text-[#F5F5F5] tracking-[-0.02em] text-2xl">KORAMP</p>
       </div>
     ),
   },

@@ -30,17 +30,23 @@ const TRUST = [
 function Countdown({ secs, refreshing }: { secs: number; refreshing?: boolean }) {
   if (refreshing) {
     return (
-      <span className="inline-flex items-center gap-2 text-sm text-[#C7A048]">
+      <span className="inline-flex items-center gap-2 text-[13px] text-[#D4B78F]">
         <Clock className="w-4 h-4 animate-spin" aria-hidden />
         Memperbarui harga...
       </span>
     );
   }
+  const pct = Math.max(0, Math.min(100, (secs / 60) * 100));
   return (
-    <span className={clsx('inline-flex items-center gap-2 text-sm', secs < 15 ? 'text-[#E15B4F]' : secs < 30 ? 'text-[#D9A441]' : 'text-ink-secondary')}>
-      <Clock className="w-4 h-4" aria-hidden />
-      Harga diperbarui dalam <span className="tnum font-semibold">{secs}s</span>
-    </span>
+    <div className="space-y-2">
+      <span className={clsx('inline-flex items-center gap-2 text-[13px]', secs < 15 ? 'text-[#EF4444]' : secs < 30 ? 'text-[#D4B78F]' : 'text-[#8B8B93]')}>
+        <Clock className="w-4 h-4" aria-hidden />
+        Harga diperbarui dalam <span className="tnum font-semibold">{secs}s</span>
+      </span>
+      <div className="h-1 rounded-full bg-[#232326] overflow-hidden" role="progressbar" aria-valuenow={secs} aria-valuemin={0} aria-valuemax={60}>
+        <div className="h-full rounded-full bg-[#D4B78F] transition-all duration-1000" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -80,18 +86,20 @@ export function SummaryPanel({
       try {
         const res = await fetch('/api/prices', { cache: 'no-store' });
         const data = await res.json();
-        if (!stop && res.ok && data.prices?.[asset]) setLiveRate(data.prices[asset]);
+        // Prefer same-venue Binance spot (matches the TradingView chart);
+        // fall back to the CoinGecko pipeline when spot is unavailable.
+        if (!stop && res.ok) setLiveRate(data.spot?.[asset] ?? data.prices?.[asset] ?? null);
       } catch { /* panel tetap tampil tanpa kurs */ }
     };
     load();
-    const id = setInterval(load, 60_000);
+    const id = setInterval(load, 15_000);
     return () => { stop = true; clearInterval(id); };
   }, [quote, asset]);
 
   return (
-    <div className="border border-line rounded-2xl bg-surface-1 overflow-hidden">
-      <div className="px-5 py-3.5 border-b border-line flex items-center justify-between">
-        <p className="font-display font-semibold text-ink-primary">Ringkasan</p>
+    <div className="border border-[#232326] rounded-xl bg-[#141416] overflow-hidden lg:sticky lg:top-20" style={{ backdropFilter: 'blur(12px)' }}>
+      <div className="px-6 py-3.5 border-b border-[#232326] flex items-center justify-between">
+        <p className="font-semibold text-[15px] text-[#F5F5F5] tracking-[-0.02em]">Ringkasan</p>
         {asset && (
           <span className="inline-flex items-center gap-1.5 text-xs text-ink-secondary">
             <TokenIcon symbol={asset} size={16} />
@@ -100,12 +108,12 @@ export function SummaryPanel({
         )}
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className="p-6 space-y-4">
         {quote && asset ? (
           <>
-            <div className="flex justify-between text-sm">
-              <span className="text-ink-muted">Rate</span>
-              <span className="tnum text-ink-primary">1 {asset} = {formatIDR(quote.exchangeRate)}</span>
+            <div className="flex justify-between text-[13px]">
+              <span className="text-[#5A5A60]">Rate</span>
+              <span className="tnum text-[#F5F5F5]">1 {asset} = {formatIDR(quote.exchangeRate)}</span>
             </div>
 
             <FeeBreakdown
@@ -119,21 +127,21 @@ export function SummaryPanel({
             />
 
             {variant === 'topup' ? (
-              <div className="flex justify-between items-center pt-3 border-t border-line-subtle">
-                <span className="text-ink-secondary text-sm font-semibold">Anda terima</span>
-                <span className="tnum font-bold text-xl text-[#C7A048]">
+              <div className="flex justify-between items-center pt-3 border-t border-[#232326]">
+                <span className="text-[#8B8B93] text-sm font-semibold">Anda terima</span>
+                <span className="tnum font-bold text-xl text-[#D4B78F]">
                   {formatCrypto(quote.cryptoAmount)} {asset}
                 </span>
               </div>
             ) : (
-              <div className="space-y-2 pt-3 border-t border-line-subtle">
+              <div className="space-y-2 pt-3 border-t border-[#232326]">
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-ink-muted">Anda kirim</span>
-                  <span className="tnum text-ink-primary font-semibold">{formatCrypto(quote.cryptoAmount)} {asset}</span>
+                  <span className="text-[#5A5A60]">Anda kirim</span>
+                  <span className="tnum text-[#F5F5F5] font-semibold">{formatCrypto(quote.cryptoAmount)} {asset}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-ink-secondary text-sm font-semibold">Anda terima</span>
-                  <span className="tnum font-bold text-xl text-[#4CAF6D]">{formatIDR(quote.totalIdr ?? quote.idrAmount)}</span>
+                  <span className="text-[#8B8B93] text-sm font-semibold">Anda terima</span>
+                  <span className="tnum font-bold text-2xl text-[#22C55E]">{formatIDR(quote.totalIdr ?? quote.idrAmount)}</span>
                 </div>
               </div>
             )}
@@ -153,13 +161,13 @@ export function SummaryPanel({
               </span>
             </div>
             <p className="text-ink-muted text-xs leading-relaxed">
-              Lanjutkan ke langkah nominal untuk mengunci quote — rincian biaya
+              Lanjutkan ke langkah nominal untuk mengunci quote. Rincian biaya
               akan muncul di sini.
             </p>
           </>
         ) : (
           <p className="text-ink-muted text-sm leading-relaxed">
-            Pilih aset dulu — ringkasan kurs dan biaya akan muncul di sini.
+            Pilih aset dulu. Ringkasan kurs dan biaya akan muncul di sini.
           </p>
         )}
 

@@ -131,8 +131,9 @@ export default function OrderStatusPage() {
     if (orderPollIntervalRef.current) clearInterval(orderPollIntervalRef.current);
     orderPollIntervalRef.current = setInterval(fetchOrder, orderPollBackoffRef.current);
 
-    // For CRYPTO_PROCESSING: also poll check-delivery every 8s to actively
+    // For CRYPTO_PROCESSING: also poll check-delivery every 12s to actively
     // probe the blockchain — avoids waiting for cron reconcile in development.
+    // 12s = 5 req/min, di bawah limit 6/min (interval 8s = 7.5/min → 429).
     if (orderStatus === 'CRYPTO_PROCESSING') {
       const checkDelivery = async () => {
         try {
@@ -145,7 +146,7 @@ export default function OrderStatusPage() {
       };
       // Fire immediately, then every 8s.
       checkDelivery();
-      deliveryPollIntervalRef.current = setInterval(checkDelivery, 8000);
+      deliveryPollIntervalRef.current = setInterval(checkDelivery, 12000);
     }
 
     return () => {
@@ -197,8 +198,8 @@ export default function OrderStatusPage() {
       const data = await res.json();
       if (data.confirmed) setScanMsg('Crypto dikonfirmasi! Payout diproses.');
       else if (data.found) setScanMsg(`Terdeteksi (${data.confirmations ?? 0}/${data.requiredConfirmations ?? '?'} konfirmasi).`);
-      else if (data.reason === 'expired') setScanMsg('Order kedaluwarsa — tempel TX hash manual di bawah.');
-      else if (data.reason === 'rate_limited' || data.reason === 'throttled') setScanMsg('Terlalu sering — tunggu sebentar lalu coba lagi.');
+      else if (data.reason === 'expired') setScanMsg('Order kedaluwarsa. Tempel TX hash manual di bawah.');
+      else if (data.reason === 'rate_limited' || data.reason === 'throttled') setScanMsg('Terlalu sering. Tunggu sebentar lalu coba lagi.');
       else setScanMsg('Belum terdeteksi di blockchain. Pastikan TX sudah dikirim.');
       await fetchOrder();
     } catch {
@@ -236,7 +237,7 @@ export default function OrderStatusPage() {
     return (
       <div className="min-h-screen bg-base">
         <Navbar />
-        <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16 text-center">
           <RefreshCw className="w-8 h-8 text-brand-400 animate-spin mx-auto mb-3" />
           <p className="text-gray-400"><ShimmerText>Memuat status order...</ShimmerText></p>
         </div>
@@ -248,7 +249,7 @@ export default function OrderStatusPage() {
     return (
       <div className="min-h-screen bg-base">
         <Navbar />
-        <div className="max-w-xl mx-auto px-4 py-16 text-center">
+        <div className="max-w-xl mx-auto px-4 sm:px-6 py-16 text-center">
           <AlertTriangle className="w-10 h-10 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-black text-white mb-2">Order tidak ditemukan</h2>
           <p className="text-gray-500 text-sm mb-6">{error ?? 'Periksa kembali ID order Anda.'}</p>
@@ -271,14 +272,14 @@ export default function OrderStatusPage() {
   return (
     <div className="min-h-screen bg-base">
       <Navbar />
-      <div className="max-w-xl mx-auto px-4 py-8">
+      <div className="max-w-xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Back */}
         <button onClick={() => router.push('/')} className="flex items-center gap-2 text-gray-500 hover:text-white text-sm mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Beranda
         </button>
 
         {/* Order header */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <TokenIcon symbol={order.asset} size={26} />
@@ -319,8 +320,10 @@ export default function OrderStatusPage() {
           ) : (
             <div className="space-y-3">
               {steps.map((s, i) => {
+                // COMPLETED = semua step done (termasuk "Selesai"), bukan active/spinner.
                 let state: 'done' | 'active' | 'pending' = 'pending';
-                if (i < currentIdx) state = 'done';
+                if (isCompleted) state = 'done';
+                else if (i < currentIdx) state = 'done';
                 else if (i === currentIdx) state = 'active';
                 return <StatusStep key={s.key} label={s.label} state={state} />;
               })}
@@ -334,7 +337,7 @@ export default function OrderStatusPage() {
 
           {[
             ['Tipe', isTopUp ? 'Top Up (IDR → Crypto)' : 'Sell (Crypto → IDR)'],
-            ['Asset', <span key="asset-val" className={assetColor}>{order.asset} — {order.network}</span>],
+            ['Asset', <span key="asset-val" className={assetColor}>{order.asset} / {order.network}</span>],
             isTopUp
               ? ['Nominal IDR', fmt(order.idrAmount)]
               : ['Crypto dijual', `${fmtC(order.cryptoAmount)} ${order.asset}`],
@@ -368,7 +371,7 @@ export default function OrderStatusPage() {
         {/* TOPUP: Payment info */}
         {isTopUp && order.payment && (
           <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5">
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Pembayaran KiPay</p>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Pembayaran TransFi</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Status</span>

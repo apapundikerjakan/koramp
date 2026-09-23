@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       const rej = await banGate(ip);
       if (rej) return NextResponse.json(rej.body, { status: rej.status, headers: { 'Retry-After': String(rej.retryAfter) } });
     }
-    if (!rateLimit('sell-order', ip, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    if (!(await rateLimit('sell-order', ip, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS))) {
       return NextResponse.json(
         { error: { code: 'RATE_LIMITED', message: 'Too many requests. Silakan coba lagi nanti.' } },
         { status: 429 }

@@ -67,22 +67,22 @@ export function FeeBreakdown(p: FeeBreakdownProps) {
       {!collapsed && (
         <>
           <div className={clsx('flex justify-between', t)}>
-            <span className="text-gray-500">Biaya layanan{pctSuffix(p.serviceFeeRate)}</span>
-            <span className="text-red-400">− {formatIDR(p.serviceFee)}</span>
+            <span className="text-[#5A5A60]">Biaya layanan{pctSuffix(p.serviceFeeRate)}</span>
+            <span className="tnum text-[#8B8B93]">− {formatIDR(p.serviceFee)}</span>
           </div>
           <div className={clsx('flex justify-between', t)}>
-            <span className="text-gray-500">Tax{pctSuffix(p.taxRate)}</span>
-            <span className="text-red-400">− {formatIDR(p.tax)}</span>
+            <span className="text-[#5A5A60]">Tax{pctSuffix(p.taxRate)}</span>
+            <span className="tnum text-[#8B8B93]">− {formatIDR(p.tax)}</span>
           </div>
           <div className={clsx('flex justify-between', t)}>
-            <span className="text-gray-500">Biaya jaringan{pctSuffix(p.networkFeeRate)}</span>
-            <span className="text-red-400">− {formatIDR(p.networkFee)}</span>
+            <span className="text-[#5A5A60]">Biaya jaringan{pctSuffix(p.networkFeeRate)}</span>
+            <span className="tnum text-[#8B8B93]">− {formatIDR(p.networkFee)}</span>
           </div>
         </>
       )}
-      <div className={clsx('flex justify-between font-semibold pt-1.5 border-t border-line-subtle', t)}>
-        <span className="text-gray-300">Total potongan{totalPct}</span>
-        <span className="text-red-400">− {formatIDR(total)}</span>
+      <div className={clsx('flex justify-between font-semibold pt-1.5 border-t border-[#232326]', t)}>
+        <span className="text-[#8B8B93]">Total potongan{totalPct}</span>
+        <span className="tnum text-[#8B8B93]">− {formatIDR(total)}</span>
       </div>
     </div>
   );

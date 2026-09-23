@@ -29,7 +29,7 @@ export async function guardPublic(
       }),
     };
   }
-  if (!rateLimit(bucket, ip, max, windowMs, opts)) {
+  if (!(await rateLimit(bucket, ip, max, windowMs, opts))) {
     return {
       ip,
       response: NextResponse.json(
@@ -44,7 +44,22 @@ export async function guardPublic(
 /** Read + JSON.parse request body with byte-bound enforcement (anti chunked-DoS). */
 export async function readJsonBounded<T = unknown>(req: Request): Promise<T> {
   const raw = await readBoundedBody(req);
-  return JSON.parse(raw) as T;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    const { AppError } = await import('./errors');
+    throw new AppError(400, 'INVALID_JSON', 'Body JSON tidak valid.');
+  }
+}
+
+import crypto from 'crypto';
+
+function bearerEqual(auth: string, secret: string): boolean {
+  // Constant-time comparison: no early-exit oracle on prefix matches.
+  const a = Buffer.from(auth);
+  const b = Buffer.from(`Bearer ${secret}`);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 /**
@@ -63,7 +78,7 @@ export function guardCron(req: NextRequest): NextResponse | null {
     return null;
   }
   const auth = req.headers.get('authorization') ?? '';
-  if (auth !== `Bearer ${secret}`) {
+  if (!bearerEqual(auth, secret)) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
   return null;

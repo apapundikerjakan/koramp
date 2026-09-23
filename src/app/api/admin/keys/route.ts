@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       rotated: true,
       keyVersion: nextVersion,
       adminKey: key,
-      warning: 'Simpan key ini sekarang — key lama sudah mati dan key ini tidak bisa ditampilkan lagi.',
+      warning: 'Simpan key ini sekarang. Key lama sudah mati dan key ini tidak bisa ditampilkan lagi.',
     });
     res.headers.set('Set-Cookie', getAdminSessionCookie(token));
     return res;

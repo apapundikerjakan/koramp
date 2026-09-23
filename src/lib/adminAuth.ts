@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { AppError } from './errors';
 
 /**
- * KIPRAMP ADMIN AUTHENTICATION
+ * KORAMP ADMIN AUTHENTICATION
  *
  * Arsitektur:
  * - Satu kemungkinan admin (tidak ada role hierarchy)
@@ -276,7 +276,7 @@ export async function requireAdmin(req: NextRequest): Promise<AdminSessionPayloa
   {
     const { rateLimit, getClientIp } = await import('./rateLimit');
     const ip = getClientIp(req);
-    if (!rateLimit('admin-api', ip || 'unknown', 120, 60_000)) {
+    if (!(await rateLimit('admin-api', ip || 'unknown', 120, 60_000))) {
       throw new AppError(429, 'RATE_LIMITED', 'Too many requests. Silakan coba lagi nanti.');
     }
   }

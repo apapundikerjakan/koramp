@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { publicId: st
     const topUp = await prisma.topUpOrder.findUnique({
       where: { publicId },
       include: {
-        payment: { select: { status: true, requestedAmount: true, uniqueCode: true, grossAmount: true, feeAmount: true, netAmount: true, qrPayload: true, kipayTrxId: true, kipayMode: true, expiresAt: true, paidAt: true, provider: true } },
+        payment: { select: { status: true, requestedAmount: true, uniqueCode: true, grossAmount: true, feeAmount: true, netAmount: true, qrPayload: true, provider: true, providerOrderId: true, providerStatus: true, payUrl: true, expiresAt: true, paidAt: true } },
         withdrawal: { select: { txHash: true, status: true, sentAt: true } },
         quote: { select: { cryptoAmount: true, totalIdr: true, marketPrice: true, serviceFee: true, networkFee: true } },
       },
@@ -49,7 +49,8 @@ export async function GET(req: NextRequest, { params }: { params: { publicId: st
         payment: topUp.payment
           ? {
               status: topUp.payment.status,
-              kipayTrxId: topUp.payment.kipayTrxId,
+              providerOrderId: topUp.payment.providerOrderId,
+              providerStatus: topUp.payment.providerStatus,
               requestedAmount: topUp.payment.requestedAmount,
               uniqueCode: topUp.payment.uniqueCode,
               grossAmount: topUp.payment.grossAmount,

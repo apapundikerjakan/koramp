@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Kipramp Wallet Context — Dual Wallet Support
+ * KORAMP Wallet Context — Dual Wallet Support
  *
  * Supports EVM (wagmi v2) and Solana (@solana/wallet-adapter-react)
  * SIMULTANEOUSLY. Both wallets can be connected at the same time.

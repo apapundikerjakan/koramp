@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { AppError } from './errors';
 
 interface RateLimitEntry {
   key: string;
@@ -9,13 +10,17 @@ interface RateLimitEntry {
 /**
  * Rate limiter abstraction (P21).
  *
- * - Local dev: in-memory store (this file).
- * - Production: swap `rateLimiter` with a Redis/Upstash implementation
- *   behind the same `RateLimitBackend` interface. No route code changes needed.
+ * - Local dev: in-memory store (MemoryRateLimitStore below).
+ * - Production: implement a Redis backend behind RateLimitBackend and return
+ *   it from resolveBackend() when RATE_LIMIT_STORE=distributed is configured.
+ *   No route code changes needed. Until then, distributed mode fails closed.
  */
 export interface RateLimitBackend {
   check(key: string, maxRequests: number, windowMs: number): boolean;
   getRemaining(key: string, maxRequests: number): number;
+  /** Async variants (required for network-backed stores like Redis). */
+  checkAsync(key: string, maxRequests: number, windowMs: number): Promise<boolean>;
+  getRemainingAsync(key: string, maxRequests: number): Promise<number>;
 }
 
 /**
@@ -76,11 +81,66 @@ class InMemoryRateLimitBackend implements RateLimitBackend {
     if (Date.now() > entry.resetAt) return maxRequests;
     return Math.max(0, maxRequests - entry.count);
   }
+
+  async checkAsync(key: string, maxRequests: number, windowMs: number): Promise<boolean> {
+    return this.check(key, maxRequests, windowMs);
+  }
+
+  async getRemainingAsync(key: string, maxRequests: number): Promise<number> {
+    return this.getRemaining(key, maxRequests);
+  }
 }
 
-// Single instance untuk seluruh aplikasi.
-// To use Redis in production, replace with RedisRateLimitBackend implementing same interface.
-export const rateLimiter: RateLimitBackend = new InMemoryRateLimitBackend();
+// Single memory instance for local development/tests.
+const memoryBackend = new InMemoryRateLimitBackend();
+
+export type RateLimitStoreMode = 'memory' | 'distributed';
+
+/**
+ * Deployment mode selector.
+ * - `memory` (default): single-instance counters. Correct for local dev/test.
+ * - `distributed`: REQUIRED for multi-instance production. This build ships
+ *   WITHOUT a distributed backend: resolving it throws 503 (fail closed).
+ *   To provision: implement RedisRateLimitBackend (SET key value NX PX for
+ *   atomic fixed-window, or a Lua sliding-window) using RATE_LIMIT_REDIS_URL
+ *   (+ TLS/token), return it from resolveBackend() when configured, and add
+ *   a live integration test against real Redis. There is deliberately NO
+ *   silent downgrade to memory — a misconfigured production must refuse
+ *   traffic, not silently lose limits.
+ */
+export function getRateLimitMode(): RateLimitStoreMode {
+  const m = (process.env.RATE_LIMIT_STORE ?? 'memory').trim().toLowerCase();
+  return m === 'distributed' ? 'distributed' : 'memory';
+}
+
+async function resolveBackend(): Promise<RateLimitBackend> {
+  if (getRateLimitMode() === 'distributed') {
+    return getDistributedBackend();
+  }
+  return memoryBackend;
+}
+
+/**
+ * Distributed backend resolution (async import: ioredis loads only in
+ * distributed mode, never in local/test memory mode).
+ * Missing/unreachable Redis → throws 503 (fail closed, no memory fallback).
+ */
+async function getDistributedBackend(): Promise<RateLimitBackend> {
+  const url = (process.env.RATE_LIMIT_REDIS_URL ?? '').trim();
+  if (!url) {
+    throw new AppError(503, 'RATE_LIMIT_UNAVAILABLE', 'Distributed rate limiting is required but not configured.');
+  }
+  const { createRedisRateLimitBackend } = await import('./rateLimitRedis');
+  return createRedisRateLimitBackend(url);
+}
+
+/** Exposed for tests: the active backend instance. */
+export function getRateLimiter(): RateLimitBackend {
+  if (getRateLimitMode() === 'distributed') {
+    throw new AppError(503, 'RATE_LIMIT_UNAVAILABLE', 'Distributed rate limiting is required but not configured.');
+  }
+  return memoryBackend;
+}
 
 /**
  * Extract client IP — hardened against X-Forwarded-For spoofing.
@@ -142,16 +202,24 @@ export function getClientIp(req: NextRequest | Request): string {
  * and different endpoints have independent buckets.
  * Tripped limits emit a throttled FLOOD signal (max 1 write/IP/5min) so floods
  * are visible without turning the event log into a DoS vector.
+ *
+ * Fail-safe: backend resolution/selection errors DENY the request (503),
+ * never bypass the limit. A limiter that cannot count must not open the gate.
  */
-export function rateLimit(
+export async function rateLimit(
   identifier: string,
   ip: string,
   maxRequests: number,
   windowMs: number,
   opts?: { flood?: boolean },
-): boolean {
-  const key = `${identifier}:${ip}`;
-  const allowed = rateLimiter.check(key, maxRequests, windowMs);
+): Promise<boolean> {
+  let allowed: boolean;
+  try {
+    allowed = await (await resolveBackend()).checkAsync(`${identifier}:${ip}`, maxRequests, windowMs);
+  } catch (e) {
+    if (e instanceof AppError) throw e;
+    throw new AppError(503, 'RATE_LIMIT_UNAVAILABLE', 'Coba lagi nanti.');
+  }
   if (!allowed && opts?.flood !== false) {
     // Fire-and-forget: flood path must stay cheap; helper throttles internally.
     import('@/lib/security').then((m) => m.reportFlood({ ip })).catch(() => {});
@@ -159,12 +227,16 @@ export function rateLimit(
   return allowed;
 }
 
-export function getRateLimitRemaining(
+export async function getRateLimitRemaining(
   identifier: string,
   ip: string,
   maxRequests: number
-): number {
-  return rateLimiter.getRemaining(`${identifier}:${ip}`, maxRequests);
+): Promise<number> {
+  try {
+    return await (await resolveBackend()).getRemainingAsync(`${identifier}:${ip}`, maxRequests);
+  } catch {
+    return 0; // Unknown budget reads as exhausted (deny-safe for header consumers).
+  }
 }
 
 // Preset limits per endpoint type (P21 audit).

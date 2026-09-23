@@ -153,7 +153,7 @@ export async function PATCH(req: NextRequest) {
       const maxTotalMs = SEC.maxAutoHours * 3600 * 1000;
       const totalFromStart = proposed.getTime() - existing.createdAt.getTime();
       if (totalFromStart > maxTotalMs && !existing.permanent) {
-        return NextResponse.json({ error: { code: 'BAN_CAP_EXCEEDED', message: `Total ban melebihi batas ${SEC.maxAutoHours} jam — gunakan permanent eksplisit` } }, { status: 400 });
+        return NextResponse.json({ error: { code: 'BAN_CAP_EXCEEDED', message: `Total ban melebihi batas ${SEC.maxAutoHours} jam. Gunakan permanent eksplisit` } }, { status: 400 });
       }
       const expiresAt = proposed;
       const ban = await prisma.ipBan.update({

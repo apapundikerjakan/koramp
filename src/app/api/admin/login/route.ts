@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     // Login failures are tracked precisely as ADMIN_LOGIN_FAIL; skip the
     // generic FLOOD signal here to avoid double counting.
-    if (!rateLimit('admin-login', ip, RATE_LIMITS.adminLogin.max, RATE_LIMITS.adminLogin.windowMs, { flood: false })) {
+    if (!(await rateLimit('admin-login', ip, RATE_LIMITS.adminLogin.max, RATE_LIMITS.adminLogin.windowMs, { flood: false }))) {
       return NextResponse.json(
         { error: { code: 'RATE_LIMITED', message: 'Too many attempts. Silakan coba lagi nanti.' } },
         { status: 429 }

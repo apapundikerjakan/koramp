@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: {
-          payment: { select: { status: true, kipayTrxId: true, grossAmount: true } },
+          payment: { select: { status: true, provider: true, providerOrderId: true, providerStatus: true, grossAmount: true } },
         },
       }),
       prisma.topUpOrder.count({ where }),

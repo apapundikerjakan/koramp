@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { publicId: s
       const rej = await banGate(ip);
       if (rej) return NextResponse.json(rej.body, { status: rej.status, headers: { 'Retry-After': String(rej.retryAfter) } });
     }
-    if (!rateLimit('confirmed-sent', ip, 10, 60_000)) {
+    if (!(await rateLimit('confirmed-sent', ip, 10, 60_000))) {
       return NextResponse.json(
         { error: { code: 'RATE_LIMITED', message: 'Too many requests' } },
         { status: 429 },
@@ -54,10 +54,10 @@ export async function POST(req: NextRequest, { params }: { params: { publicId: s
       const bc = getBlockchainProvider(order.network as NetworkId);
       const txInfo = await bc.getTransaction(body.txHash).catch(() => null);
       if (!txInfo) {
-        throw new OrderStateError('txHash tidak ditemukan di blockchain — periksa hash Anda');
+        throw new OrderStateError('txHash tidak ditemukan di blockchain. Periksa hash Anda');
       }
       if (txInfo.txStatus === 'FAILED' || txInfo.receiptStatus === 0) {
-        throw new OrderStateError('Transaksi GAGAL di blockchain — tidak bisa dipakai');
+        throw new OrderStateError('Transaksi GAGAL di blockchain, tidak bisa dipakai');
       }
       if (!sameAddress(txInfo.from, order.walletAddress)) {
         throw new OrderStateError('txHash bukan dari wallet order ini');

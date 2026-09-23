@@ -1,4 +1,7 @@
-import { BlockchainProvider } from './types';
+import type { BlockchainProvider } from './types';
+import { createMockProvider } from './mock';
+import { baseProvider, bscProvider } from './evm';
+import { solanaProvider } from './solana';
 
 export type NetworkId = 'SOLANA' | 'BASE' | 'BSC';
 
@@ -18,24 +21,14 @@ export function getBlockchainProvider(network: NetworkId): BlockchainProvider {
   }
 
   if (type === 'mock') {
-    const { createMockProvider } = require('./mock');
     return createMockProvider(network);
   }
 
   // Real providers
   switch (network) {
-    case 'SOLANA': {
-      const { solanaProvider } = require('./solana');
-      return solanaProvider;
-    }
-    case 'BASE': {
-      const { baseProvider } = require('./evm');
-      return baseProvider;
-    }
-    case 'BSC': {
-      const { bscProvider } = require('./evm');
-      return bscProvider;
-    }
+    case 'SOLANA': return solanaProvider;
+    case 'BASE':   return baseProvider;
+    case 'BSC':    return bscProvider;
     default:
       throw new Error(`Unknown network: ${network}`);
   }

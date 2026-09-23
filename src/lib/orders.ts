@@ -1,11 +1,43 @@
 import Decimal from 'decimal.js';
-import type { KipayTransaction } from './kipay';
 import { prisma } from './prisma';
 import { validateAndUseQuote, AssetSymbol, NetworkId, validateAssetNetwork } from './pricing';
 import { getBlockchainProvider, type BlockchainProvider } from './blockchain';
-import { kipayCreateTransaction, kipayGetTransaction, KiPayError } from './kipay';
+import {
+  transfiCreateOnrampOrder,
+  transfiGetOrder,
+  TransfiError,
+  decideTransfiTransition,
+  shouldSkipKipremDelivery,
+  type TransfiOrderStatus,
+} from './transfi';
 import { generatePublicId, generateOrderNumber } from './id';
 import { AppError, ValidationError } from './errors';
+
+/**
+ * TransFi destination tickers per KORAMP asset (docs: supported-crypto table).
+ * MUST be verified per-MID via List Tokens in sandbox before enabling a pair.
+ * Native only — never silently substitute stablecoins (separate decision).
+ */
+const TRANSFI_DESTINATION_TICKER: Record<string, string> = {
+  SOL: 'SOL',
+  ETH: 'ETH',
+  BNB: 'BNBBSC',
+};
+
+export function transfiTickerForAsset(assetSymbol: string): string {
+  const ticker = TRANSFI_DESTINATION_TICKER[assetSymbol];
+  if (!ticker) throw new ValidationError(`Aset ${assetSymbol} belum didukung TransFi`);
+  return ticker;
+}
+
+/** TransFi sender (UX-) — operator-provisioned. KORAMP collects no PII. */
+export function transfiSenderUserId(): string {
+  const v = (process.env.TRANSFI_SENDER_USER_ID ?? '').trim();
+  if (!v) {
+    throw new TransfiError('config', 'CONFIGURATION');
+  }
+  return v;
+}
 
 function requiredConfirmations(asset: string): number {
   // Testnet: low confirmations for fast testing
@@ -35,10 +67,10 @@ export async function createTopUpOrder(opts: {
 
   const quote = await validateAndUseQuote(opts.quoteId, 'TOP_UP');
   const orderNumber = generateOrderNumber();
-  const publicId = generatePublicId('krp');
+  const publicId = generatePublicId('krm');
   const orderExpiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 min
 
-  // Order + payment DIBUAT DULU (recoverable §9/§27) — KiPay menyusul.
+  // Order + payment DIBUAT DULU (recoverable §9/§27) — TransFi menyusul.
   // Quote tetap dikonsumsi atomik di atas (anti double-spend via reuse).
   const order = await prisma.topUpOrder.create({
     data: {
@@ -70,20 +102,29 @@ export async function createTopUpOrder(opts: {
     },
   });
 
-  // Create KiPay transaction for QRIS — Decimal rounding, never float (P23).
+  // Create TransFi onramp order — partnerId = KORAMP publicId (one-to-one).
+  // Decimal rounding, never float (P23). Customer amount = KORAMP totalIdr.
   const idrInt = new Decimal(quote.totalIdr.toString()).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).toNumber();
-  let kipayTx;
+  let tfOrder;
   try {
-    kipayTx = await kipayCreateTransaction({
-      amount: idrInt,
-      note: orderNumber,
+    tfOrder = await transfiCreateOnrampOrder({
+      userId: transfiSenderUserId(),
+      partnerId: publicId,
+      purposeCode: (process.env.TRANSFI_PURPOSE_CODE ?? 'company_expenses').trim() || 'company_expenses',
+      purposeCodeReason: (process.env.TRANSFI_PURPOSE_CODE_REASON ?? '').trim() || undefined,
+      sourceCurrency: 'IDR',
+      sourceAmount: idrInt,
+      paymentType: (process.env.TRANSFI_PAYMENT_TYPE ?? '').trim() || undefined,
+      paymentCode: (process.env.TRANSFI_PAYMENT_CODE ?? '').trim() || undefined,
+      destinationCurrency: transfiTickerForAsset(quote.assetSymbol),
+      walletAddress: opts.walletAddress,
     });
   } catch (e) {
-    // Gagal deterministik (400/404) → FAILED, user buat order baru (tanpa retry).
+    // Gagal deterministik (400/404/409) → FAILED, user buat order baru (tanpa retry).
     // Ambigu (timeout/5xx) → UNKNOWN, JANGAN buat transaksi kedua (§10);
     // reconcile men-expire-nya agar user bisa buat order baru dengan aman.
-    const isUnknown = e instanceof KiPayError && (e.category === 'UNKNOWN' || e.category === 'TRANSIENT');
-    const safeCategory = e instanceof KiPayError ? e.category : 'UNKNOWN';
+    const isUnknown = e instanceof TransfiError && (e.category === 'UNKNOWN' || e.category === 'TRANSIENT');
+    const safeCategory = e instanceof TransfiError ? e.category : 'UNKNOWN';
     const failExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     const recovered = await prisma.$transaction(async (tx) => {
       const failedPayment = await tx.payment.update({
@@ -95,8 +136,8 @@ export async function createTopUpOrder(opts: {
         data: {
           status: isUnknown ? 'PAYMENT_CREATE_UNKNOWN' : 'PAYMENT_CREATE_FAILED',
           failureReason: isUnknown
-            ? 'Pembayaran tidak dapat dipastikan — buat order baru.'
-            : 'Layanan pembayaran tidak tersedia — buat order baru.',
+            ? 'Pembayaran tidak dapat dipastikan. Buat order baru.'
+            : 'Layanan pembayaran tidak tersedia. Buat order baru.',
           expiresAt: failExpiresAt,
         },
       });
@@ -111,35 +152,31 @@ export async function createTopUpOrder(opts: {
     });
     return {
       ...recovered,
-      kipayTrxId: null,
+      providerOrderId: null,
       paymentCreation: {
         state: isUnknown ? 'UNKNOWN' : 'FAILED',
         message: 'Layanan pembayaran sedang tidak tersedia. Silakan coba lagi.',
       },
     };
-    throw new AppError(
-      503, 'PAYMENT_PROVIDER_UNAVAILABLE',
-      isUnknown
-        ? 'Status pembayaran tidak pasti, jangan bayar apa pun. Silakan buat order baru.'
-        : 'Layanan pembayaran gangguan, coba lagi.',
-    );
+
   }
 
-  // Store KiPay response ke payment record
+  // Store TransFi response ke payment record (provider fields generik).
   const updatedPayment = await prisma.payment.update({
     where: { id: payment.id },
     data: {
-      kipayTrxId: kipayTx.trx_id,
-      kipayMode: kipayTx.mode,
-      requestedAmount: kipayTx.requested_amount,
-      uniqueCode: kipayTx.unique_code,
-      grossAmount: kipayTx.amount,
-      feeAmount: kipayTx.fee_amount,
-      // net_amount not returned by create/get in KiPay v1.2.0 (only in webhook)
+      provider: 'transfi',
+      providerOrderId: tfOrder.orderId,
+      providerStatus: tfOrder.status,
+      payUrl: tfOrder.payUrl ?? null,
+      qrPayload: tfOrder.qrCode ?? null,
+      providerFee: tfOrder.feeData?.totalFee != null ? new Decimal(tfOrder.feeData.totalFee) : undefined,
+      providerRate: tfOrder.feeData?.exchangeRate != null ? new Decimal(tfOrder.feeData.exchangeRate) : undefined,
+      providerQuote: tfOrder.feeData ? JSON.stringify(tfOrder.feeData) : undefined,
+      providerCreatedAt: new Date(),
+      providerUpdatedAt: new Date(),
       status: 'PENDING',
-      // qr_payload not in JSON response v1.2.0 — QR fetched via GET /qr.png
-      note: kipayTx.note,
-      expiresAt: new Date(kipayTx.expires_at ?? orderExpiresAt.toISOString()),
+      note: orderNumber,
       lastVerifiedAt: new Date(),
     },
   });
@@ -149,7 +186,7 @@ export async function createTopUpOrder(opts: {
     data: { status: 'PAYMENT_PENDING' },
   });
 
-  return { order, payment: updatedPayment, kipayTrxId: kipayTx.trx_id };
+  return { order, payment: updatedPayment, providerOrderId: tfOrder.orderId, payUrl: tfOrder.payUrl ?? null };
 }
 
 // ─── SELL ─────────────────────────────────────────────────────────────────────
@@ -174,7 +211,7 @@ export async function createSellOrder(opts: {
 
   const quote = await validateAndUseQuote(opts.quoteId, 'SELL');
   const orderNumber = generateOrderNumber();
-  const publicId = generatePublicId('krs');
+  const publicId = generatePublicId('kms');
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
   // Get deposit address from platform wallet
@@ -231,115 +268,83 @@ export async function createSellOrder(opts: {
   return { order };
 }
 
-// ─── PAYMENT WEBHOOK PROCESSOR ────────────────────────────────────────────────
-// Kontrak KiPay v1.x: { event, sent_at, transaction: { trx_id, status, ... } }.
-// Atomic idempotency via unique (kipayTrxId, eventType) + DB transaction (P16).
+// ─── PAYMENT WEBHOOK PROCESSOR (TransFi onramp) ───────────────────────────────
+// Kontrak: { eventId, entityId (OR-...), entityType, status, ... }.
+// Atomic idempotency via unique (orderId, eventId) + DB transaction.
+// Webhook hanya sinyal — fulfillment selalu via server-to-server GET order.
 
-export interface KipayWebhookInput {
-  event: 'transaction.paid' | 'transaction.expired' | 'webhook.test';
-  sent_at?: string;
-  deliveryId?: string;
-  trxId: string;
-  transaction: {
-    trx_id: string;
-    mode?: string;
-    requested_amount?: number;
-    unique_code?: number;
-    amount?: number;
-    fee_amount?: number;
-    fee_bearer?: string;
-    net_amount?: number;
-    status?: string;
-    provider?: string | null;
-    matched_at?: string | null;
-  };
-}
-
-/** Parse "YYYY-MM-DD HH:MM:SS" KiPay sebagai UTC eksplisit (kontrak tanpa offset). */
-export function parseKipayTime(v: string | null | undefined): Date | null {
-  if (!v || typeof v !== 'string') return null;
-  const iso = /[zZ+-]\d{2}:?\d{2}$/.test(v.trim()) ? v.trim() : `${v.trim().replace(' ', 'T')}Z`;
-  const d = new Date(iso);
-  return Number.isFinite(d.getTime()) ? d : null;
+export interface TransfiWebhookInput {
+  eventId: string;
+  orderId: string;
+  status: TransfiOrderStatus;
 }
 
 /**
- * Verifikasi model amount KiPay v1.2.0:
- *   fee_bearer='merchant' (default): amount = requested_amount + unique_code
- *   fee_bearer='user':               amount = requested_amount + unique_code + fee_amount
- *
- * Selalu: upstream.amount === gross lokal.
+ * Verifikasi nilai TransFi vs lokal:
+ * - feeData.depositAmount (jika ada) harus == totalIdr KORAMP (exact int).
+ * - destination wallet harus == order.destinationAddress.
+ * - cryptoTicker harus == ticker ekspektasi aset.
  */
-export function verifyKipayAmounts(
-  local: { requested: number; unique: number; gross: number },
-  upstream: { amount?: number; fee_bearer?: string; fee_amount?: number },
+export function verifyTransfiAmounts(
+  local: { totalIdr: number; destinationAddress: string; ticker: string },
+  upstream: { fiatAmount?: number; destinationWalletAddress?: string; cryptoTicker?: string },
 ): { ok: true } | { ok: false; reason: string } {
-  const { amount, fee_bearer, fee_amount } = upstream;
-
-  if (!Number.isSafeInteger(local.requested) || !Number.isSafeInteger(local.unique) || !Number.isSafeInteger(local.gross)) {
-    return { ok: false, reason: 'local amount fields are invalid' };
+  if (!Number.isSafeInteger(local.totalIdr) || local.totalIdr <= 0) {
+    return { ok: false, reason: 'local totalIdr invalid' };
   }
-
-  // Verify local gross matches the requested+unique formula
-  if (local.requested + local.unique !== local.gross) {
-    return { ok: false, reason: 'local requested_amount + unique_code does not equal gross amount' };
+  if (upstream.fiatAmount !== undefined && upstream.fiatAmount !== local.totalIdr) {
+    return { ok: false, reason: `upstream fiatAmount ${upstream.fiatAmount} != local ${local.totalIdr}` };
   }
-
-  if (typeof amount !== 'number' || !Number.isSafeInteger(amount) || amount <= 0) {
-    return { ok: false, reason: 'upstream amount is invalid' };
+  if (!upstream.destinationWalletAddress) {
+    return { ok: false, reason: 'upstream destination wallet missing' };
   }
-
-  // For fee_bearer='user', KiPay adds fee_amount on top — the gross paid by
-  // the user is higher than what the merchant requested. Our local gross was
-  // computed before knowing fee_bearer, so we accept either formula.
-  if (fee_bearer === 'user' && typeof fee_amount === 'number' && Number.isSafeInteger(fee_amount)) {
-    // user bears fee: amount = requested + unique + fee
-    const expectedUser = local.requested + local.unique + fee_amount;
-    if (amount !== expectedUser) {
-      return { ok: false, reason: `upstream amount ${amount} does not match requested+unique+fee ${expectedUser}` };
-    }
-  } else {
-    // merchant bears fee (default): amount = requested + unique
-    if (amount !== local.gross) {
-      return { ok: false, reason: `upstream amount ${amount} does not match local gross ${local.gross}` };
-    }
+  // EVM hex is case-insensitive; Solana base58 is case-sensitive (exact).
+  const a = upstream.destinationWalletAddress;
+  const b = local.destinationAddress;
+  const same = a.startsWith('0x') || b.startsWith('0x')
+    ? a.toLowerCase() === b.toLowerCase()
+    : a === b;
+  if (!same) {
+    return { ok: false, reason: 'upstream destination wallet mismatch' };
   }
-
+  if (upstream.cryptoTicker && upstream.cryptoTicker !== local.ticker) {
+    return { ok: false, reason: `upstream ticker ${upstream.cryptoTicker} != expected ${local.ticker}` };
+  }
   return { ok: true };
 }
 
-/** Keputusan transisi murni — bisa di-unit-test (§38 V/W/X). */
-export function decideTopUpTransition(
+/** Keputusan transisi murni — bisa di-unit-test. */
+export function decideTransfiTopUpTransition(
   orderStatus: string,
-  kipayStatus: string,
-): 'confirm' | 'expire' | 'keep' | 'ignore' {
-  if (kipayStatus === 'paid') {
-    return ['CREATED', 'PAYMENT_PENDING'].includes(orderStatus) ? 'confirm' : 'ignore';
+  transfiStatus: TransfiOrderStatus,
+): 'confirm' | 'expire-payment' | 'expire-crypto' | 'keep' | 'ignore' | 'complete' {
+  const d = decideTransfiTransition(orderStatus, transfiStatus);
+  if (d === 'confirm') return 'confirm';
+  if (d === 'complete') return 'complete';
+  if (d === 'expire') {
+    return transfiStatus === 'asset_settle_failed' ? 'expire-crypto' : 'expire-payment';
   }
-  if (kipayStatus === 'expired') {
-    return ['CREATED', 'PAYMENT_PENDING'].includes(orderStatus) ? 'expire' : 'ignore';
-  }
-  return 'keep'; // pending/unknown → jangan tandai gagal (§26)
+  return d; // keep | ignore
 }
 
-export async function processKipayWebhook(payload: KipayWebhookInput) {
-  const { trxId, event } = payload;
+export async function processTransfiWebhook(payload: TransfiWebhookInput) {
+  const { orderId, eventId, status } = payload;
 
   // Fast-path: already processed.
-  const existing = await prisma.kipayWebhook.findUnique({
-    where: { kipayTrxId_eventType: { kipayTrxId: trxId, eventType: event } },
+  const existing = await prisma.transfiWebhook.findUnique({
+    where: { orderId_eventId: { orderId, eventId } },
   });
   if (existing?.processedAt) return { alreadyProcessed: true };
 
-  // Find payment
+  // Find payment by provider order id.
   const payment = await prisma.payment.findUnique({
-    where: { kipayTrxId: trxId },
+    where: { providerOrderId: orderId },
     include: { topUpOrder: true },
   });
   if (!payment) {
-    await prisma.kipayWebhook.upsert({
-      where: { kipayTrxId_eventType: { kipayTrxId: trxId, eventType: event } },
-      create: { kipayTrxId: trxId, eventType: event, payload: JSON.stringify(payload), processedAt: new Date() },
+    await prisma.transfiWebhook.upsert({
+      where: { orderId_eventId: { orderId, eventId } },
+      create: { orderId, eventId, status, payload: JSON.stringify(payload), processedAt: new Date() },
       update: {},
     });
     return { notFound: true };
@@ -347,17 +352,17 @@ export async function processKipayWebhook(payload: KipayWebhookInput) {
 
   // Atomically claim webhook: insert if absent, or reuse unprocessed record.
   // Unique constraint guarantees duplicate webhooks never fulfill twice.
-  let webhookRecord: Awaited<ReturnType<typeof prisma.kipayWebhook.upsert>>;
+  let webhookRecord: Awaited<ReturnType<typeof prisma.transfiWebhook.upsert>>;
   try {
-    webhookRecord = await prisma.kipayWebhook.upsert({
-      where: { kipayTrxId_eventType: { kipayTrxId: trxId, eventType: event } },
-      create: { kipayTrxId: trxId, paymentId: payment.id, eventType: event, payload: JSON.stringify(payload) },
+    webhookRecord = await prisma.transfiWebhook.upsert({
+      where: { orderId_eventId: { orderId, eventId } },
+      create: { orderId, eventId, paymentId: payment.id, status, payload: JSON.stringify(payload) },
       update: { paymentId: payment.id },
     });
   } catch (err: unknown) {
     // Unique race: another worker claimed it concurrently.
-    const raced = await prisma.kipayWebhook.findUnique({
-      where: { kipayTrxId_eventType: { kipayTrxId: trxId, eventType: event } },
+    const raced = await prisma.transfiWebhook.findUnique({
+      where: { orderId_eventId: { orderId, eventId } },
     });
     if (raced?.processedAt) return { alreadyProcessed: true };
     throw err;
@@ -367,33 +372,25 @@ export async function processKipayWebhook(payload: KipayWebhookInput) {
   const order = payment.topUpOrder;
 
   // Skip already-processed orders (but still mark webhook processed for consistency).
-  // PAYMENT_CREATE_UNKNOWN is reachable from webhook if the original POST left the
-  // order in UNKNOWN and reconcile has not yet expired it.
-  if (!['CREATED', 'PAYMENT_PENDING', 'PAYMENT_CREATE_UNKNOWN'].includes(order.status)) {
-    await prisma.kipayWebhook.update({ where: { id: webhookRecord.id }, data: { processedAt: new Date() } });
+  if (!['CREATED', 'PAYMENT_PENDING', 'PAYMENT_CREATE_UNKNOWN', 'PAYMENT_CONFIRMED', 'CRYPTO_PROCESSING'].includes(order.status)) {
+    await prisma.transfiWebhook.update({ where: { id: webhookRecord.id }, data: { processedAt: new Date() } });
     return { skipped: true };
   }
 
-  if (event === 'transaction.paid' || event === 'transaction.expired') {
-    // Both paid and expired flow through verifyAndFulfillTopUp — that function
-    // performs a server-to-server GET and transitions to the correct terminal
-    // state (PAYMENT_CONFIRMED or PAYMENT_FAILED) atomically. The dead
-    // duplicate `else if (event === 'transaction.expired')` block has been
-    // removed; expiry is handled inside verifyAndFulfillTopUp via
-    // decideTopUpTransition → 'expire' branch.
-    const result = await verifyAndFulfillTopUp(order.publicId);
-    await prisma.kipayWebhook.update({ where: { id: webhookRecord.id }, data: { processedAt: new Date() } }).catch(() => {});
-    return result;
-  }
-
-  await prisma.kipayWebhook.update({ where: { id: webhookRecord.id }, data: { processedAt: new Date() } });
-  return { processed: true };
+  // Webhook hanya sinyal — fulfillment via server-to-server GET (single path).
+  const result = await verifyAndFulfillTopUp(order.publicId);
+  await prisma.transfiWebhook.update({ where: { id: webhookRecord.id }, data: { processedAt: new Date() } }).catch(() => {});
+  return result;
 }
 
 /**
  * Verifikasi server-to-server + fulfillment idempoten (§13/§20/§21).
  * dipakai webhook, payment-status endpoint, dan reconcile — ketiganya
  * konvergen ke state akhir yang sama apa pun urutan kedatangannya.
+ *
+ * TransFi direct-to-user settlement: fund_deposited → PAYMENT_CONFIRMED,
+ * asset_settled → COMPLETED LANGSUNG. KORAMP TIDAK PERNAH memanggil
+ * processCryptoDelivery untuk order TransFi (tidak ada pengiriman kedua).
  */
 export async function verifyAndFulfillTopUp(publicId: string, opts?: { throttleMs?: number }): Promise<
   | { state: 'CONFIRMED' }
@@ -407,11 +404,11 @@ export async function verifyAndFulfillTopUp(publicId: string, opts?: { throttleM
     where: { publicId },
     include: { payment: true },
   });
-  if (!order || !order.payment || !order.payment.kipayTrxId) return { state: 'NOT_FOUND' };
+  if (!order || !order.payment || !order.payment.providerOrderId) return { state: 'NOT_FOUND' };
   const payment = order.payment;
-  const kipayTrxId: string = order.payment.kipayTrxId;
+  const providerOrderId: string = order.payment.providerOrderId;
 
-  if (!['CREATED', 'PAYMENT_PENDING'].includes(order.status)) {
+  if (!['CREATED', 'PAYMENT_PENDING', 'PAYMENT_CONFIRMED', 'CRYPTO_PROCESSING'].includes(order.status)) {
     return { state: 'CONVERGED', status: order.status };
   }
 
@@ -422,11 +419,18 @@ export async function verifyAndFulfillTopUp(publicId: string, opts?: { throttleM
     return { state: 'PENDING' };
   }
 
-  let verified: KipayTransaction;
+  // Claim the throttle window SEBELUM upstream call yang lambat.
+  // Tanpa ini, poll bersamaan menumpuk request upstream + write SQLite.
+  await prisma.payment.update({
+    where: { id: payment.id },
+    data: { lastVerifiedAt: new Date(), providerUpdatedAt: new Date() },
+  }).catch(() => {});
+
+  let verified: Awaited<ReturnType<typeof transfiGetOrder>>;
   try {
-    verified = await kipayGetTransaction(kipayTrxId);
+    verified = await transfiGetOrder(providerOrderId);
   } catch (e) {
-    // Upstream tak terjangkau / trx hilang: JANGAN ubah status (§26).
+    // Upstream tak terjangkau: JANGAN ubah status (§26).
     await prisma.payment.update({
       where: { id: payment.id },
       data: { lastVerifiedAt: new Date() },
@@ -435,101 +439,131 @@ export async function verifyAndFulfillTopUp(publicId: string, opts?: { throttleM
   }
   await prisma.payment.update({
     where: { id: payment.id },
-    data: { lastVerifiedAt: new Date() },
+    data: { lastVerifiedAt: new Date(), providerStatus: verified.status, providerUpdatedAt: new Date() },
   }).catch(() => {});
 
-  const decision = decideTopUpTransition(order.status, verified.status);
+  const decision = decideTransfiTopUpTransition(order.status, verified.status);
 
   if (decision === 'keep') {
     return { state: 'PENDING' };
   }
+  if (decision === 'ignore') {
+    return { state: 'CONVERGED', status: order.status };
+  }
 
-  if (decision === 'expire') {
+  if (decision === 'expire-payment' || decision === 'expire-crypto') {
+    const cryptoFailed = decision === 'expire-crypto';
     await prisma.$transaction(async (tx) => {
       await tx.payment.update({ where: { id: payment.id }, data: { status: 'EXPIRED' } });
       await tx.topUpOrder.update({
         where: { id: order.id },
-        data: { status: 'PAYMENT_FAILED', failureReason: 'QRIS expired — buat order baru.' },
+        data: {
+          status: cryptoFailed ? 'CRYPTO_FAILED' : 'PAYMENT_FAILED',
+          failureReason: cryptoFailed ? 'Pengiriman kripto gagal. Hubungi support.' : 'QRIS expired. Buat order baru.',
+        },
       });
     });
     return { state: 'EXPIRED' };
   }
 
-  // decision === 'confirm': verifikasi penuh SEBELUM fulfill (§41).
-  // 1. Mode cocok (cegah campur sandbox/production §4).
-  const expectedMode = (process.env.KIPAY_MODE ?? 'sandbox').trim();
-  if (verified.mode !== expectedMode) {
-    console.error(`[topup] mode mismatch trx=${payment.kipayTrxId}: upstream=${verified.mode} env=${expectedMode}`);
-    return { state: 'UNKNOWN', reason: 'mode_mismatch' };
+  // decision === 'confirm' (fund_deposited): verifikasi penuh SEBELUM fulfill.
+  // 1. Mode cocok (cegah campur sandbox/production).
+  const expectedMode = (process.env.TRANSFI_MODE ?? 'sandbox').trim();
+  const cfgModeOk = expectedMode === 'sandbox' || expectedMode === 'production';
+  if (!cfgModeOk) {
+    return { state: 'UNKNOWN', reason: 'transfi_mode_misconfigured' };
   }
-  // 2. Amount verification menggunakan data dari KiPay upstream (trusted source).
-  // requestedAmount di DB = nominal yang kita kirim ke KiPay (sebelum unique_code).
-  // KiPay menambahkan unique_code dan mungkin fee_amount (jika fee_bearer=user).
-  // Verifikasi: upstream.requested_amount harus cocok dengan local requestedAmount.
-  const localRequested = Math.round(Number(payment.requestedAmount));
-
-  // Jika unique_code belum tersimpan di DB (payment baru dibuat), ambil dari upstream.
-  const localUnique = payment.uniqueCode ?? (verified.unique_code ?? 0);
-
-  // Untuk fee_bearer='user': gross = requested + unique + fee
-  // Untuk fee_bearer='merchant': gross = requested + unique
-  const computedGross = verified.fee_bearer === 'user' && verified.fee_amount
-    ? localRequested + localUnique + verified.fee_amount
-    : localRequested + localUnique;
-
-  // Verifikasi upstream amount cocok dengan yang seharusnya
-  if (verified.amount !== computedGross) {
-    console.error(
-      `[topup] amount mismatch trx=${payment.kipayTrxId}: ` +
-      `upstream=${verified.amount} computed=${computedGross} ` +
-      `(requested=${localRequested} unique=${localUnique} fee_bearer=${verified.fee_bearer} fee=${verified.fee_amount})`
-    );
-    return { state: 'UNKNOWN', reason: 'amount_mismatch' };
+  // 2. Amount + destination + ticker verification dari upstream (trusted source).
+  // feeData.depositAmount harus == totalIdr KORAMP (exact int, tanpa toleransi).
+  const localTotalIdr = Math.round(Number(order.totalIdr));
+  const amountCheck = verifyTransfiAmounts(
+    {
+      totalIdr: localTotalIdr,
+      destinationAddress: order.destinationAddress,
+      ticker: transfiTickerForAsset(order.assetSymbol),
+    },
+    {
+      fiatAmount: verified.feeData?.depositAmount,
+      destinationWalletAddress: verified.walletAddress,
+      cryptoTicker: undefined, // ticker validated at order creation; status GET may omit it
+    },
+  );
+  if (!amountCheck.ok) {
+    console.error(`[topup] transfi verification failed order=${order.publicId}: ${amountCheck.reason}`);
+    return { state: 'UNKNOWN', reason: amountCheck.reason };
   }
 
-  // Verifikasi upstream requested_amount cocok dengan yang kita kirim
-  if (verified.requested_amount !== undefined && verified.requested_amount !== localRequested) {
-    console.error(
-      `[topup] requested_amount mismatch trx=${payment.kipayTrxId}: ` +
-      `upstream=${verified.requested_amount} local=${localRequested}`
-    );
-    return { state: 'UNKNOWN', reason: 'requested_amount_mismatch' };
+  if (decision === 'confirm') {
+    // 3. Transisi atomik guarded (hanya sekali — konvergensi webhook vs polling).
+    const transitioned = await prisma.$transaction(async (tx) => {
+      const current = await tx.topUpOrder.findUnique({ where: { id: order.id }, select: { status: true } });
+      if (!current || !['CREATED', 'PAYMENT_PENDING'].includes(current.status)) return false;
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'PAID',
+          paidAt: new Date(),
+          provider: 'transfi',
+          providerStatus: verified.status,
+          providerFee: verified.feeData?.totalFee != null ? new Decimal(verified.feeData.totalFee) : undefined,
+          providerRate: verified.feeData?.exchangeRate != null ? new Decimal(verified.feeData.exchangeRate) : undefined,
+          providerQuote: verified.feeData ? JSON.stringify(verified.feeData) : undefined,
+          providerUpdatedAt: new Date(),
+        },
+      });
+      await tx.topUpOrder.update({ where: { id: order.id }, data: { status: 'PAYMENT_CONFIRMED' } });
+      await tx.auditLog.create({
+        data: {
+          action: 'PAYMENT_CONFIRMED', entity: 'TopUpOrder', entityId: order.id,
+          actor: order.walletAddress,
+          metadata: JSON.stringify({ providerOrderId, status: verified.status }),
+        },
+      });
+      return true;
+    });
+
+    if (!transitioned) return { state: 'CONVERGED', status: 'PAYMENT_CONFIRMED' };
+    // TIDAK ADA processCryptoDelivery — TransFi yang mengirim kripto ke user.
+    return { state: 'CONFIRMED' };
   }
 
-  // 3. Transisi atomik guarded (hanya sekali — konvergensi webhook vs polling).
-  const transitioned = await prisma.$transaction(async (tx) => {
+  // decision === 'complete' (asset_settled): verifikasi + COMPLETED langsung.
+  // TIDAK ADA pengiriman kripto oleh KORAMP — settlement milik TransFi.
+  const completed = await prisma.$transaction(async (tx) => {
     const current = await tx.topUpOrder.findUnique({ where: { id: order.id }, select: { status: true } });
-    if (!current || !['CREATED', 'PAYMENT_PENDING'].includes(current.status)) return false;
+    if (!current || !['CREATED', 'PAYMENT_PENDING', 'PAYMENT_CONFIRMED', 'CRYPTO_PROCESSING'].includes(current.status)) {
+      return false;
+    }
     await tx.payment.update({
       where: { id: payment.id },
       data: {
         status: 'PAID',
-        paidAt: parseKipayTime(verified.matched_at) ?? new Date(),
-        provider: verified.provider,
-        // Update dengan nilai aktual dari KiPay (unique_code & gross dari upstream)
-        uniqueCode: verified.unique_code ?? undefined,
-        grossAmount: verified.amount,         // actual amount yang dibayar user
-        requestedAmount: verified.requested_amount ?? Math.round(Number(payment.requestedAmount)),
-        feeAmount: verified.fee_amount ?? undefined,
+        paidAt: new Date(),
+        provider: 'transfi',
+        providerStatus: verified.status,
+        providerFee: verified.feeData?.totalFee != null ? new Decimal(verified.feeData.totalFee) : undefined,
+        providerRate: verified.feeData?.exchangeRate != null ? new Decimal(verified.feeData.exchangeRate) : undefined,
+        providerQuote: verified.feeData ? JSON.stringify(verified.feeData) : undefined,
+        providerUpdatedAt: new Date(),
       },
     });
-    await tx.topUpOrder.update({ where: { id: order.id }, data: { status: 'PAYMENT_CONFIRMED' } });
+    await tx.topUpOrder.update({
+      where: { id: order.id },
+      data: { status: 'COMPLETED', completedAt: new Date() },
+    });
     await tx.auditLog.create({
       data: {
-        action: 'PAYMENT_CONFIRMED', entity: 'TopUpOrder', entityId: order.id,
+        action: 'ORDER_COMPLETED', entity: 'TopUpOrder', entityId: order.id,
         actor: order.walletAddress,
-        metadata: JSON.stringify({ kipayTrxId: payment.kipayTrxId, amount: verified.amount }),
+        metadata: JSON.stringify({ provider: 'transfi', providerOrderId, status: verified.status }),
       },
     });
     return true;
   });
 
-  if (!transitioned) return { state: 'CONVERGED', status: 'PAYMENT_CONFIRMED' };
-
-  try {
-    await processCryptoDelivery(order.id);
-  } catch (err) {
-    console.error('[verifyAndFulfillTopUp] delivery error (will be retried by reconcile):', err);
+  if (!completed) {
+    const fresh = await prisma.topUpOrder.findUnique({ where: { id: order.id }, select: { status: true } });
+    return { state: 'CONVERGED', status: fresh?.status ?? order.status };
   }
   return { state: 'CONFIRMED' };
 }
@@ -587,9 +621,12 @@ async function waitForConfirmation(
 export async function processCryptoDelivery(topUpOrderId: string) {
   const order = await prisma.topUpOrder.findUnique({
     where: { id: topUpOrderId },
-    include: { withdrawal: true },
+    include: { withdrawal: true, payment: { select: { provider: true } } },
   });
   if (!order) return;
+  // HARD GUARD: TransFi orders settle directly to the user wallet.
+  // KORAMP must never broadcast a second delivery for them.
+  if (shouldSkipKipremDelivery(order.payment?.provider)) return;
   // Idempotency: already completed/failed terminal states are not re-processed
   // except CRYPTO_PROCESSING which is resumable by cron (P14).
   if (!['PAYMENT_CONFIRMED', 'CRYPTO_PROCESSING'].includes(order.status)) return;
@@ -808,7 +845,7 @@ export async function processSellPayout(sellOrderId: string) {
     if (transfer.status === 'FAILED' || transfer.status === 'REFUNDED') throw new Error(`Fyas ${transfer.status}: ${transfer.refId}`);
     await pollFyasTransferUntilFinal(order.id, transfer.refId);
     */
-  } catch (err: any) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('[processSellPayout] error:', message);
     await prisma.$transaction(async (tx) => {

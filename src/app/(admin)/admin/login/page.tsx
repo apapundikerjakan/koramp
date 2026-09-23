@@ -28,7 +28,7 @@ function RestrictedCountdown({ remaining, retryAfter, restrictionId, onExpire }:
 
   return (
     <div className="w-full max-w-md text-center bg-surface-2 border border-line rounded-xl p-8">
-      <p className="text-brand-400 text-xs font-bold tracking-widest mb-2">KIPRAMP SECURITY</p>
+      <p className="text-brand-400 text-xs font-bold tracking-widest mb-2">KORAMP SECURITY</p>
       <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
         <ShieldAlert className="w-6 h-6 text-red-400" />
       </div>
@@ -38,9 +38,9 @@ function RestrictedCountdown({ remaining, retryAfter, restrictionId, onExpire }:
         become available after the restriction expires.
       </p>
       <p className="text-gray-500 text-xs uppercase tracking-widest mt-5">Time remaining</p>
-      <p className="text-white font-mono font-black text-3xl mt-1">{left > 0 ? tickFormat(left) : (remaining ?? '—')}</p>
+      <p className="text-white font-mono font-black text-3xl mt-1">{left > 0 ? tickFormat(left) : (remaining ?? '-')}</p>
       {restrictionId && <p className="text-gray-600 text-xs mt-2 font-mono">Ref: {restrictionId}</p>}
-      <p className="text-gray-500 text-xs mt-4">If you believe this is a mistake, contact KIPRAMP support.</p>
+      <p className="text-gray-500 text-xs mt-4">If you believe this is a mistake, contact KORAMP support.</p>
     </div>
   );
 }
@@ -141,7 +141,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-base flex items-center justify-center px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white">KIPRAMP ADMIN</h1>
+          <h1 className="text-2xl font-bold text-white">KORAMP ADMIN</h1>
           <p className="text-gray-400 text-sm mt-2">
             {step === 1 ? 'Admin Access Key Authentication' : 'Kode Authenticator'}
           </p>
@@ -210,7 +210,7 @@ export default function AdminLoginPage() {
                   className="w-full px-4 py-3 bg-base border border-line-strong rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-brand-500/50 transition-colors font-mono text-center text-2xl tracking-[0.5em]"
                 />
                 <p className="text-gray-500 text-xs mt-1.5">
-                  Buka aplikasi authenticator, masukkan kode yang tampil. Kode berganti tiap 30 detik — Anda punya ~1 menit (toleransi ±1 langkah).
+                  Buka aplikasi authenticator, masukkan kode yang tampil. Kode berganti tiap 30 detik. Anda punya ~1 menit (toleransi ±1 langkah).
                 </p>
               </div>
 

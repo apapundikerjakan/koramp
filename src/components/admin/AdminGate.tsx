@@ -69,7 +69,7 @@ export function RestrictedNotice({ remaining, retryAfter, restrictionId }: {
   return (
     <div className="min-h-screen bg-base flex items-center justify-center px-4">
       <div className="w-full max-w-md text-center bg-surface-2 border border-line rounded-xl p-8">
-        <p className="text-brand-400 text-xs font-bold tracking-widest mb-2">KIPRAMP SECURITY</p>
+        <p className="text-brand-400 text-xs font-bold tracking-widest mb-2">KORAMP SECURITY</p>
         <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-6 h-6 text-red-400" />
         </div>
@@ -82,14 +82,14 @@ export function RestrictedNotice({ remaining, retryAfter, restrictionId }: {
         <div className="mt-5 mb-1">
           <p className="text-gray-500 text-xs uppercase tracking-widest">Time remaining</p>
           <p className="text-white font-mono font-black text-3xl mt-1">
-            {left === null ? (remaining ?? '—') : tickFormat(left)}
+            {left === null ? (remaining ?? '-') : tickFormat(left)}
           </p>
           {restrictionId && (
             <p className="text-gray-600 text-xs mt-2 font-mono">Ref: {restrictionId}</p>
           )}
         </div>
         <p className="text-gray-500 text-xs mt-4 leading-relaxed">
-          If you believe this is a mistake, contact KIPRAMP support.
+          If you believe this is a mistake, contact KORAMP support.
         </p>
       </div>
     </div>

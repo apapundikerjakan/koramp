@@ -27,7 +27,7 @@ export default function GlobalError({
           <div style={{ maxWidth: 420, textAlign: 'center' }}>
             <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Terjadi kesalahan</h1>
             <p style={{ color: '#9FAB9F', fontSize: 14, marginBottom: 20 }}>
-              Halaman gagal dimuat. Coba lagi — jika berlanjut, hubungi tim Kipramp.
+              Halaman gagal dimuat. Coba lagi. Jika berlanjut, hubungi tim KORAMP.
             </p>
             <button
               onClick={() => reset()}

@@ -23,7 +23,7 @@ export default function Error({
       <div className="w-full max-w-md text-center">
         <h1 className="text-xl font-bold text-white mb-2">Terjadi kesalahan</h1>
         <p className="text-gray-400 text-sm mb-5">
-          Bagian ini gagal dimuat. Coba lagi — jika berlanjut, hubungi tim Kipramp.
+          Bagian ini gagal dimuat. Coba lagi. Jika berlanjut, hubungi tim KORAMP.
         </p>
         <button
           onClick={() => reset()}

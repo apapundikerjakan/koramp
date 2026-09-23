@@ -162,7 +162,7 @@ export default function AdminSellPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success('Payout dikonfirmasi — order selesai!');
+        toast.success('Payout dikonfirmasi. Order selesai!');
         load(status, search);
       } else {
         toast.error(data.error?.message ?? 'Gagal konfirmasi payout');
@@ -335,7 +335,7 @@ export default function AdminSellPage() {
                         <p className="text-gray-600 text-xs">{o.payoutAccountName}</p>
                       </div>
                     ) : (
-                      <span className="text-gray-600 text-xs">—</span>
+                      <span className="text-gray-600 text-xs">-</span>
                     )}
                   </td>
 

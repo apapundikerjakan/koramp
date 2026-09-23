@@ -3,6 +3,9 @@ import {
   SUPPORTED_EVM_CHAIN_IDS,
   EVM_CHAIN_ADD_PARAMS,
   isSupportedEvmChainId,
+  RAMP_NETWORK_IDS,
+  isRampSupported,
+  getRampAssets,
 } from '@/lib/assets';
 
 describe('EVM chain auto-detect config', () => {
@@ -45,5 +48,19 @@ describe('EVM chain auto-detect config', () => {
     expect(SUPPORTED_ASSETS.BNB.chainId).toBe(97);
     expect(SUPPORTED_ASSETS.ETH.chainId).toBe(84532);
     expect(SUPPORTED_ASSETS.BNB.walletEcosystem).toBe('EVM');
+  });
+
+  it('Ramp hanya Solana, Base, BNB Chain (Top Up & Sell)', () => {
+    expect([...RAMP_NETWORK_IDS].sort()).toEqual(['BASE', 'BSC', 'SOLANA']);
+    expect(isRampSupported('SOLANA')).toBe(true);
+    expect(isRampSupported('BASE')).toBe(true);
+    expect(isRampSupported('BSC')).toBe(true);
+    expect(isRampSupported(null)).toBe(false);
+    expect(isRampSupported(undefined)).toBe(false);
+    expect(getRampAssets().sort()).toEqual(['BNB', 'ETH', 'SOL']);
+    for (const a of getRampAssets()) {
+      expect(SUPPORTED_ASSETS[a].supportsTopUp).toBe(true);
+      expect(SUPPORTED_ASSETS[a].supportsSell).toBe(true);
+    }
   });
 });

@@ -2,7 +2,7 @@
 
 /**
  * AnalyticsCharts — admin revenue/expense/sales/visits (recharts).
- * Styled with Kiswap tokens (surface bg, subtle grid, mono numerals),
+ * Styled with KORAMP tokens (surface bg, subtle grid, mono numerals),
  * NOT the default recharts theme.
  */
 
@@ -125,7 +125,7 @@ export function AnalyticsCharts() {
       ) : (
         <>
           {empty && (
-            <p className="text-ink-muted text-xs mb-3">Belum ada order COMPLETED atau kunjungan pada rentang ini — grafik akan terisi otomatis.</p>
+            <p className="text-ink-muted text-xs mb-3">Belum ada order COMPLETED atau kunjungan pada rentang ini, grafik akan terisi otomatis.</p>
           )}
           {/* Text alternative for charts (screen readers) */}
           {totals && !empty && (

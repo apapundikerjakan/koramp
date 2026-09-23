@@ -38,7 +38,7 @@ export async function POST(
       const rej = await banGate(ip);
       if (rej) return NextResponse.json(rej.body, { status: rej.status, headers: { 'Retry-After': String(rej.retryAfter) } });
     }
-    if (!rateLimit(`poll-deposit:${params.publicId}`, ip, 6, 60_000)) {
+    if (!(await rateLimit(`poll-deposit:${params.publicId}`, ip, 6, 60_000))) {
       return ok({ polled: false, reason: 'rate_limited' });
     }
 

@@ -55,6 +55,15 @@ let inFlightFetch: Promise<Partial<Record<AssetSymbol, Decimal>>> | null = null;
 // rather than use indefinitely stale prices (financial safety).
 const MAX_STALE_MS = 5 * 60 * 1000; // 5 minutes
 
+// Negative backoff: when CoinGecko fails (e.g. HTTP 429), stop hitting it
+// for a while instead of retrying on every request (which deepens the
+// rate-limit and floods logs). Fallback chain below (manual → stale) is
+// unchanged, so financial safety is preserved.
+let cgBackoffUntil = 0;
+const CG_BACKOFF_MS = 45_000; // 45 seconds
+let cgFailLoggedUntil = 0;
+const CG_FAIL_LOG_COOLDOWN_MS = 5 * 60 * 1000; // log failures at most every 5 min
+
 function allowHardcodedFallback(): boolean {
   return process.env.MARKETPLACE_EMERGENCY_HARDCODED_PRICE === 'true';
 }
@@ -115,6 +124,105 @@ async function fetchFromCoinGecko(): Promise<Partial<Record<AssetSymbol, Decimal
   return result;
 }
 
+// ─── Binance spot (same venue as the TradingView chart) ────────────────────
+// Display-only indicative price. The chart renders BINANCE:XXXIDR spot, so
+// the "current rate" label must come from the same venue or a structural
+// ~1% gap appears (CoinGecko aggregates across exchanges + USD conversion).
+// NEVER feed quotes from here: api.binance.com is geo-blocked (451) in some
+// regions, so this is best-effort with graceful null — callers fall back to
+// the CoinGecko pipeline. No cache beyond a short TTL; stale spot is still
+// returned for display (better slightly old than empty).
+
+const BINANCE_URL = 'https://api.binance.com/api/v3/ticker/price';
+
+const BINANCE_SYMBOLS: Record<AssetSymbol, string> = {
+  SOL: 'SOLIDR',
+  ETH: 'ETHIDR',
+  BNB: 'BNBIDR',
+};
+
+const SPOT_TTL_MS = 15_000; // 15 seconds — display freshness, not quote math
+
+const spotCache = new Map<AssetSymbol, CacheEntry>();
+let inFlightSpot: Promise<Partial<Record<AssetSymbol, Decimal>>> | null = null;
+
+// Circuit breaker: api.binance.com diblokir di sebagian jaringan/region
+// (HTTP 451 / DNS / timeout). Tanpa ini, tiap /api/prices menunggu timeout
+// dan membanjiri log. Setelah 3 gagal beruntun, berhenti mencoba selama
+// 5 menit dan diam-diam pakai CoinGecko — hanya log saat transisi.
+let spotFails = 0;
+let spotBreakerUntil = 0;
+const SPOT_FAIL_THRESHOLD = 3;
+const SPOT_BREAKER_MS = 5 * 60 * 1000;
+
+function spotAllowed(): boolean {
+  return Date.now() >= spotBreakerUntil;
+}
+
+async function fetchFromBinance(): Promise<Partial<Record<AssetSymbol, Decimal>>> {
+  const symbols = encodeURIComponent(JSON.stringify(Object.values(BINANCE_SYMBOLS)));
+  const res = await fetch(`${BINANCE_URL}?symbols=${symbols}`, {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(3000), // display-only: gagal cepat, jangan tahan response
+    cache: 'no-store',
+  });
+
+  if (!res.ok) throw new Error(`Binance HTTP ${res.status}`);
+
+  const data = (await res.json()) as Array<{ symbol?: string; price?: string }>;
+  const bySymbol = new Map((Array.isArray(data) ? data : []).map((d) => [d.symbol, d.price]));
+
+  const result: Partial<Record<AssetSymbol, Decimal>> = {};
+  for (const [asset, sym] of Object.entries(BINANCE_SYMBOLS) as [AssetSymbol, string][]) {
+    const raw = bySymbol.get(sym);
+    if (raw && Number(raw) > 0) result[asset] = new Decimal(raw);
+  }
+  if (Object.keys(result).length === 0) throw new Error('Binance returned no usable prices');
+  return result;
+}
+
+/**
+ * Best-effort Binance spot price for DISPLAY only (same venue as chart).
+ * Returns null when Binance fails — caller must fall back to CoinGecko.
+ * Stale cache is acceptable here (indicative label, never quote math).
+ */
+export async function getSpotPrice(asset: AssetSymbol): Promise<Decimal | null> {
+  const now = Date.now();
+  const cached = spotCache.get(asset);
+  if (cached && now - cached.fetchedAt < SPOT_TTL_MS) return cached.priceIdr;
+
+  // Breaker terbuka → jangan sentuh jaringan sama sekali (hening total).
+  if (!spotAllowed()) return cached?.priceIdr ?? null;
+
+  try {
+    if (!inFlightSpot) {
+      inFlightSpot = fetchFromBinance().finally(() => {
+        inFlightSpot = null;
+      });
+    }
+    const prices = await inFlightSpot;
+    const fetchedAt = Date.now();
+    for (const [sym, price] of Object.entries(prices) as [AssetSymbol, Decimal][]) {
+      spotCache.set(sym, { priceIdr: price, fetchedAt });
+    }
+    if (spotFails > 0) {
+      spotFails = 0;
+      console.warn('[marketPrice] Binance spot recovered — breaker closed');
+    }
+    return spotCache.get(asset)?.priceIdr ?? null;
+  } catch (err) {
+    spotFails++;
+    // Log hanya pada kegagalan pertama dan saat breaker dibuka — bukan tiap request.
+    if (spotFails === 1) {
+      console.warn(`[marketPrice] Binance spot fetch failed: ${err instanceof Error ? err.message : err} — display falls back to CoinGecko`);
+    } else if (spotFails === SPOT_FAIL_THRESHOLD) {
+      spotBreakerUntil = Date.now() + SPOT_BREAKER_MS;
+      console.warn(`[marketPrice] Binance spot breaker OPEN for ${SPOT_BREAKER_MS / 60000} min after ${spotFails} failures (likely geo-blocked)`);
+    }
+    return cached?.priceIdr ?? null;
+  }
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -143,19 +251,27 @@ export async function getLivePrice(
     return cached.priceIdr;
   }
 
-  // 2. Try live fetch via single-flight (concurrent callers share one request)
-  try {
-    const prices = await fetchSingleFlight();
-    const fetchedAt = Date.now();
+  // 2. Try live fetch via single-flight (concurrent callers share one request).
+  // Skipped while negative backoff is active (upstream just failed).
+  const inBackoff = Date.now() < cgBackoffUntil;
+  if (!inBackoff) {
+    try {
+      const prices = await fetchSingleFlight();
+      const fetchedAt = Date.now();
 
-    for (const [sym, price] of Object.entries(prices) as [AssetSymbol, Decimal][]) {
-      priceCache.set(sym, { priceIdr: price, fetchedAt });
+      for (const [sym, price] of Object.entries(prices) as [AssetSymbol, Decimal][]) {
+        priceCache.set(sym, { priceIdr: price, fetchedAt });
+      }
+
+      const fresh = priceCache.get(asset);
+      if (fresh) return fresh.priceIdr;
+    } catch (err) {
+      cgBackoffUntil = Date.now() + CG_BACKOFF_MS;
+      if (Date.now() >= cgFailLoggedUntil) {
+        cgFailLoggedUntil = Date.now() + CG_FAIL_LOG_COOLDOWN_MS;
+        console.warn(`[marketPrice] CoinGecko fetch failed: ${err instanceof Error ? err.message : err} — backing off ${CG_BACKOFF_MS / 1000}s, serving manual/stale`);
+      }
     }
-
-    const fresh = priceCache.get(asset);
-    if (fresh) return fresh.priceIdr;
-  } catch (err) {
-    console.warn(`[marketPrice] CoinGecko fetch failed: ${err instanceof Error ? err.message : err}`);
   }
 
   // 3. Admin manual price (preferred over stale cache)

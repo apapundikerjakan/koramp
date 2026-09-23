@@ -6,30 +6,28 @@
  * Wraps PUBLIC wallet routes only (see src/app/(public)/layout.tsx).
  * Must NEVER be mounted in root layout or admin routes.
  *
- * Architecture (final):
+ * Architecture (final — RainbowKit native):
  *   WalletProviders
  *   ├── WagmiProvider (RainbowKit-configured connectors)
  *   │    └── QueryClientProvider (single QueryClient)
- *   │         └── RainbowKitProvider (EVM infra theming; selection lives in UnifiedWalletModal)
+ *   │         └── RainbowKitProvider (dark theme; NATIVE RainbowKit modal —
+ *   │              no custom wallet list/popup for EVM)
  *   ├── ConnectionProvider + SolanaWalletProvider (Phantom/Solflare/Backpack, direct adapters)
- *   └── KiprampWalletProvider (unified state bridge: EVM + Solana simultaneously)
+ *   │    └── WalletModalProvider (OFFICIAL Solana modal — no custom Solana list)
+ *   └── KiprampWalletProvider (unified state bridge: EVM + Solana simultaneously;
+ *        transaction-signing layer for topup/sell — logic untouched)
  *
- * EVM connection flows through RainbowKit wallet connectors
- * (MetaMask / Rabby / Coinbase / WalletConnect) via wagmi `useConnect` —
- * the unified modal triggers them directly, so NO second RainbowKit
- * selection dialog ever opens. Solana uses official wallet adapters.
- *
- * Optimizations:
- *  - Direct Phantom/Solflare/Backpack adapter imports (no aggregator).
- *  - No WalletModalProvider / react-ui (UnifiedWalletModal is the only modal).
- *  - UnifiedWalletModal lazy-loaded via next/dynamic (ssr:false).
- *  - Single QueryClient, single wagmi config, single Solana ConnectionProvider.
+ * EVM connection UI is 100% RainbowKit (<ConnectButton /> + native modal).
+ * Solana connection UI is 100% official wallet-adapter modal, opened via
+ * SolanaModalBridge whenever legacy `setShowConnectModal(true)` callers
+ * (topup/sell pages) request a Solana wallet.
  */
 
 import React, { useMemo, useEffect } from 'react';
-import dynamic from 'next/dynamic';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { baseSepolia, bscTestnet } from 'wagmi/chains';
+import {
+  baseSepolia, bscTestnet,
+} from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider, connectorsForWallets, darkTheme } from '@rainbow-me/rainbowkit';
 import {
@@ -46,14 +44,26 @@ import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { BackpackWalletAdapter } from '@solana/wallet-adapter-backpack';
 import { clusterApiUrl } from '@solana/web3.js';
-import { WalletProvider as KiprampWalletProvider } from '@/contexts/WalletContext';
+import { WalletModalProvider, useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { WalletProvider as KiprampWalletProvider, useWallet } from '@/contexts/WalletContext';
 import { Toaster } from 'sonner';
 
-// Lazy Solana-only modal — not eagerly loaded until opened.
-const SolanaWalletModal = dynamic(
-  () => import('@/components/wallet/SolanaWalletModal').then((m) => ({ default: m.SolanaWalletModal })),
-  { ssr: false },
-);
+/**
+ * SolanaModalBridge — opens the OFFICIAL Solana wallet modal whenever
+ * legacy callers request it via `setShowConnectModal(true)` (topup/sell
+ * pages). No custom wallet list is rendered anywhere.
+ */
+function SolanaModalBridge() {
+  const { showConnectModal, setShowConnectModal } = useWallet();
+  const { setVisible } = useWalletModal();
+  useEffect(() => {
+    if (showConnectModal) {
+      setVisible(true);
+      setShowConnectModal(false);
+    }
+  }, [showConnectModal, setVisible, setShowConnectModal]);
+  return null;
+}
 
 // ── QueryClient (single instance) ─────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -136,15 +146,19 @@ function buildConnectors() {
   ];
   return connectorsForWallets(
     [{ groupName: 'EVM', wallets }],
-    { appName: 'Kipramp', projectId: wcProjectId || 'ONLY_WALLETCONNECT_NEEDS_PROJECT_ID' },
+    { appName: 'KORAMP', projectId: wcProjectId || 'ONLY_WALLETCONNECT_NEEDS_PROJECT_ID' },
   );
 }
 
 const wagmiConfig = createConfig({
+  // Kategori network: EVM (testnet project) + Solana (adapter, di bawah).
+  // Ramp (Top Up/Sell) hanya didukung di Solana, Base, BNB Chain — lihat
+  // RAMP_NETWORK_IDS di lib/assets. Chain di luar itu sengaja tidak
+  // didaftarkan agar tidak muncul di RainbowKit dan tak bisa masuk flow Ramp.
   chains: [baseSepolia, bscTestnet],
   transports: {
     [baseSepolia.id]: http(basePublicRpc),
-    [bscTestnet.id]:  http(bscPublicRpc),
+    [bscTestnet.id]: http(bscPublicRpc),
   },
   connectors: buildConnectors(),
   ssr: true,
@@ -206,13 +220,17 @@ export function WalletProviders({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig} reconnectOnMount>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={darkTheme()} modalSize="compact">
+        <RainbowKitProvider
+          theme={darkTheme({ accentColor: '#C8A97E', accentColorForeground: 'white', borderRadius: 'medium' })}
+          modalSize="compact"
+        >
           <ConnectionProvider endpoint={solanaEndpoint}>
             <SolanaWalletProvider wallets={solanaWallets} autoConnect>
-              {/* Kipramp unified wallet context reads from wagmi + wallet-adapter */}
-              <KiprampWalletProvider>
-                {children}
-                <SolanaWalletModal />
+              <WalletModalProvider>
+                {/* KORAMP unified wallet context reads from wagmi + wallet-adapter */}
+                <KiprampWalletProvider>
+                  {children}
+                  <SolanaModalBridge />
                 <Toaster
                   position="top-right"
                   theme="dark"
@@ -221,6 +239,7 @@ export function WalletProviders({ children }: { children: React.ReactNode }) {
                   }}
                 />
               </KiprampWalletProvider>
+              </WalletModalProvider>
             </SolanaWalletProvider>
           </ConnectionProvider>
         </RainbowKitProvider>

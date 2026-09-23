@@ -234,9 +234,9 @@ export default function AdminSecurityPage() {
                       {e.ip}{e.country ? <span className="text-gray-600"> · ~{e.country}</span> : null}
                       {e.subnet ? <div className="text-gray-600">{e.subnet}</div> : null}
                     </td>
-                    <td className="py-2.5 px-2 text-gray-500 text-xs font-mono">{e.endpoint ?? '—'}</td>
+                    <td className="py-2.5 px-2 text-gray-500 text-xs font-mono">{e.endpoint ?? '-'}</td>
                     <td className="py-2.5 px-2 text-right text-white font-bold">{e.count}</td>
-                    <td className="py-2.5 px-2 text-gray-500 text-xs">{e.actionTaken ?? '—'}</td>
+                    <td className="py-2.5 px-2 text-gray-500 text-xs">{e.actionTaken ?? '-'}</td>
                     <td className="py-2.5 px-2 pr-4 text-gray-500 text-xs whitespace-nowrap">{formatDate(e.lastSeen)}</td>
                   </tr>
                 ))}
@@ -246,7 +246,7 @@ export default function AdminSecurityPage() {
               </tbody>
             </table>
           </div>
-          <p className="text-gray-600 text-xs mt-2">Lokasi perkiraan (~kode negara) — bukan lokasi pasti.</p>
+          <p className="text-gray-600 text-xs mt-2">Lokasi perkiraan (~kode negara), bukan lokasi pasti.</p>
         </section>
 
         {/* Bans */}
@@ -287,7 +287,7 @@ export default function AdminSecurityPage() {
                       <div className="text-gray-600">{b.requestCount} blocked hits</div>
                     </td>
                     <td className="py-2.5 px-2 text-gray-300 text-xs">{b.duration}</td>
-                    <td className="py-2.5 px-2 text-yellow-400 text-xs font-mono">{b.active ? (b.remaining ?? '—') : '—'}</td>
+                    <td className="py-2.5 px-2 text-yellow-400 text-xs font-mono">{b.active ? (b.remaining ?? '-') : '-'}</td>
                     <td className="py-2.5 px-2 text-gray-400 text-xs">
                       {b.reason}
                       {b.needsReview && <div className="text-red-400 font-semibold mt-0.5">Needs review (over cap)</div>}

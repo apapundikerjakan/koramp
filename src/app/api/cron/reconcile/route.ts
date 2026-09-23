@@ -14,6 +14,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
 import { processCryptoDelivery, processSellPayout } from '@/lib/orders';
+import { shouldSkipKipremDelivery } from '@/lib/transfi';
 import { ok } from '@/lib/response';
 import { guardCron } from '@/lib/apiGuard';
 
@@ -57,13 +58,16 @@ async function runReconcile() {
   }
 
   // 1. TopUp stuck in CRYPTO_PROCESSING — re-check withdrawal confirmation.
+  // TransFi orders NEVER use KORAMP delivery (direct-to-user settlement),
+  // so they are excluded from every delivery-resume path below.
   const stuckTopups = await prisma.topUpOrder.findMany({
     where: { status: 'CRYPTO_PROCESSING' },
-    include: { withdrawal: true },
+    include: { withdrawal: true, payment: { select: { provider: true } } },
     take: 20,
   });
   for (const o of stuckTopups) {
     try {
+      if (shouldSkipKipremDelivery(o.payment?.provider)) continue;
       if (o.withdrawal?.txHash) {
         const bc = getBlockchainProvider(o.network as NetworkId);
         const info = await bc.getTransaction(o.withdrawal.txHash).catch(() => null);
@@ -91,12 +95,15 @@ async function runReconcile() {
   }
 
   // 2. PAYMENT_CONFIRMED never started delivery (webhook process died before delivery).
+  // Legacy KiPay path only — TransFi settles directly to the user wallet.
   const neverStarted = await prisma.topUpOrder.findMany({
     where: { status: 'PAYMENT_CONFIRMED' },
+    include: { payment: { select: { provider: true } } },
     take: 20,
   });
   for (const o of neverStarted) {
     try {
+      if (shouldSkipKipremDelivery(o.payment?.provider)) continue;
       await processCryptoDelivery(o.id);
       out.resumedDeliveries++;
     } catch (e) {
@@ -118,7 +125,7 @@ async function runReconcile() {
         }).catch(() => {});
         await tx.topUpOrder.update({
           where: { id: o.id },
-          data: { status: 'PAYMENT_CREATE_FAILED', failureReason: 'Status pembayaran tidak bisa ditentukan — buat order baru.' },
+          data: { status: 'PAYMENT_CREATE_FAILED', failureReason: 'Status pembayaran tidak bisa ditentukan. Buat order baru.' },
         });
       });
       out.resumedDeliveries++;

@@ -12,13 +12,14 @@ export const dynamic = 'force-dynamic';
 /**
  * GET|POST /api/orders/[publicId]/payment-status
  *
- * Public-but-opaque-auth fallback for KiPay polling when webhook is delayed.
+ * Public-but-opaque-auth fallback for TransFi polling when webhook is delayed.
  * - authenticate by opaque publicId (order ownership is irrelevant; token is secret)
  * - locate local payment
- * - server-side GET KiPay transaction (throttled)
- * - verify trx_id + amount + mode
+ * - server-side GET TransFi order (throttled)
+ * - verify fiat amount + destination wallet + ticker
  * - update local payment/order idempotently
- * - trigger crypto delivery only once
+ * - asset_settled completes the order directly (TransFi settles to user wallet;
+ *   KORAMP never forwards crypto for TransFi orders)
  *
  * Never exposes API key. Rate limited. Bounded upstream calls.
  */
@@ -63,8 +64,10 @@ async function handlePaymentStatus(req: NextRequest, { params }: { params: { pub
       });
     }
 
-    // throttleMs=5s — fast enough for polling UX, slow enough to not hammer KiPay.
-    const result = await verifyAndFulfillTopUp(publicId, { throttleMs: 5000 });
+    // throttleMs=15s — cocok dengan default lib (15000): upstream KiPay
+    // maksimal ~4x/menit per order. Polling client lebih cepat dari ini
+    // dilayani dari DB (fast path) tanpa menyentuh upstream.
+    const result = await verifyAndFulfillTopUp(publicId, { throttleMs: 15000 });
 
     // Re-fetch order status after verification (it may have just been updated).
     const updatedOrder = await prisma.topUpOrder.findUnique({
@@ -85,13 +88,15 @@ async function handlePaymentStatus(req: NextRequest, { params }: { params: { pub
 function paymentView(payment: Payment, orderStatus: string) {
   return {
     status: payment.status,
-    kipayTrxId: payment.kipayTrxId,
+    provider: payment.provider,
+    providerOrderId: payment.providerOrderId,
+    providerStatus: payment.providerStatus,
     requestedAmount: payment.requestedAmount,
     uniqueCode: payment.uniqueCode,
     grossAmount: payment.grossAmount,
     feeAmount: payment.feeAmount,
     netAmount: payment.netAmount,
-    provider: payment.provider,
+    payUrl: payment.payUrl,
     qrPayload: qrVisibleForStatus(orderStatus) ? payment.qrPayload : null,
     paidAt: payment.paidAt,
     expiresAt: payment.expiresAt,

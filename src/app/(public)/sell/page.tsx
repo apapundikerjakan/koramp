@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import { useWallet } from '@/contexts/WalletContext';
 import {
@@ -19,7 +19,7 @@ import { TerminalGrid, ChartPanelSkeleton, ChartToggleButton, useChartToggle } f
 import { DEFAULT_CHART_ASSET } from '@/lib/tradingView';
 import { TokenIcon } from '@/components/ui/TokenIcon';
 import {
-  StepIndicator, ToolChip,
+  ToolChip,
   AnimatedCounter, ParticleBurst, ShimmerText,
 } from '@/components/ui/motion';
 
@@ -39,7 +39,6 @@ const ASSET_INFO = {
 } as const;
 
 const POPULAR_BANKS = ['BCA', 'BRI', 'BNI', 'Mandiri', 'CIMB Niaga', 'BSI', 'Permata', 'BTN'];
-const STEPS: Step[] = ['asset', 'amount', 'bank', 'confirm', 'sending', 'waiting'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -91,10 +90,19 @@ export default function SellPage() {
   } = useWallet();
 
   // ── Core state ───────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<Step>('asset');
-  const [asset, setAsset] = useState<Asset | null>(null);
-  const [inputMode, setInputMode] = useState<InputMode>('idr'); // IDR or crypto input
-  const [amountInput, setAmountInput] = useState('');           // raw user input
+  // Handoff from /topup-sell (?asset=&amount=&mode=): prefill + auto-quote.
+  const searchParams = useSearchParams();
+  const queryAsset = searchParams.get('asset');
+  const queryAmount = searchParams.get('amount') ?? '';
+  const queryMode = searchParams.get('mode');
+  const handoffAsset: Asset | null =
+    queryAsset === 'SOL' || queryAsset === 'ETH' || queryAsset === 'BNB' ? queryAsset : null;
+  const hasHandoff = handoffAsset !== null && queryAmount !== '' && Number(queryAmount) > 0;
+
+  const [step, setStep] = useState<Step>(hasHandoff ? 'amount' : 'asset');
+  const [asset, setAsset] = useState<Asset | null>(handoffAsset);
+  const [inputMode, setInputMode] = useState<InputMode>(queryMode === 'crypto' ? 'crypto' : 'idr'); // IDR or crypto input
+  const [amountInput, setAmountInput] = useState(hasHandoff ? queryAmount : '');           // raw user input
   const [quote, setQuote] = useState<any>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteExpiry, setQuoteExpiry] = useState(0);
@@ -154,14 +162,13 @@ export default function SellPage() {
     ? (ASSET_INFO[asset].walletType === 'SOLANA' ? solAddress : evmAddress)
     : address;
   const resolvedWalletType = asset ? ASSET_INFO[asset].walletType : null;
-  const stepIdx = STEPS.indexOf(step);
   const paymentUri = order
     ? buildPaymentUri({
         depositAddress: order.depositAddress,
         amount: fmtC(order.cryptoAmount),
         asset: asset ?? 'SOL',
         orderNumber: order.orderNumber,
-        label: 'Kipramp',
+        label: 'KORAMP',
       })
     : '';
 
@@ -298,6 +305,16 @@ export default function SellPage() {
     } catch { toast.error('Gagal terhubung ke server'); }
     finally { setQuoteLoading(false); }
   };
+
+  // Handoff from /topup-sell: fetch a fresh quote on mount, land on bank step.
+  const handoffRef = useRef(hasHandoff);
+  useEffect(() => {
+    if (handoffRef.current) {
+      handoffRef.current = false;
+      void getQuote();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const createOrder = async () => {
     if (!quote || !asset) return;
@@ -443,39 +460,25 @@ export default function SellPage() {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-base">
+    <div className="h-dvh flex flex-col overflow-hidden bg-base">
       <Navbar />
-      <div className="mx-auto w-full max-w-[1600px] px-4 py-6">
+      <div className="flex-1 min-h-0 mx-auto w-full max-w-[1600px] px-4 sm:px-6 py-3 sm:py-4 flex flex-col">
 
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between gap-3 mb-1">
+        <div className="mb-3 flex-shrink-0">
+          <div className="flex items-center justify-between gap-3 mb-0.5">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-green-600/20 rounded-xl flex items-center justify-center">
-                <ArrowDownToLine className="w-5 h-5 text-green-400" />
+              <div className="w-8 h-8 bg-green-600/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <ArrowDownToLine className="w-4 h-4 text-green-400" />
               </div>
-              <h1 className="text-2xl font-black text-white">Sell Crypto</h1>
+              <h1 className="text-xl font-black text-white">Sell Crypto</h1>
             </div>
             {isChartStep && <ChartToggleButton open={chartOpen} onToggle={toggleChart} />}
           </div>
-          <p className="text-gray-500 text-sm pl-12">Crypto → IDR. Terima pembayaran ke rekening bank.</p>
+          <p className="text-gray-500 text-xs sm:pl-11 hidden sm:block">Crypto → IDR. Terima pembayaran ke rekening bank.</p>
         </div>
 
-        {/* Step indicator */}
-        {!['success'].includes(step) && (
-          <StepIndicator
-            steps={[
-              { key: 'asset', label: 'Aset' },
-              { key: 'amount', label: 'Nominal' },
-              { key: 'bank', label: 'Bank' },
-              { key: 'confirm', label: 'Konfirmasi' },
-              { key: 'sending', label: 'Kirim' },
-              { key: 'waiting', label: 'Tunggu' },
-            ]}
-            current={stepIdx}
-            accent="bg-green-600"
-          />
-        )}
+        <div className="flex-1 min-h-0 flex flex-col">
 
         {/* ── ASSET ───────────────────────────────────────────────────────── */}
         {step === 'asset' && (
@@ -691,7 +694,7 @@ export default function SellPage() {
 
         {/* ── SENDING ─────────────────────────────────────────────────────── */}
         {step === 'sending' && order && asset && (
-          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full">
+          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full h-full min-h-0 overflow-y-auto pb-4">
 
             {/* Order summary bar */}
             <div className="bg-surface-1 border border-green-600/20 rounded-xl p-4 flex items-center justify-between">
@@ -841,14 +844,14 @@ export default function SellPage() {
             )}
 
             <p className="text-gray-600 text-xs text-center">
-              Kipramp memverifikasi transaksi secara independen di blockchain.
+              KORAMP memverifikasi transaksi secara independen di blockchain.
             </p>
           </div>
         )}
 
         {/* ── WAITING (payout processing) ──────────────────────────────────── */}
         {step === 'waiting' && order && (
-          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full">
+          <div className="space-y-5 animate-fade-in max-w-lg mx-auto w-full h-full min-h-0 overflow-y-auto pb-4">
 
             {/* Crypto confirmed banner */}
             {depositStatus === 'confirmed' ? (
@@ -950,7 +953,7 @@ export default function SellPage() {
 
         {/* ── SUCCESS ─────────────────────────────────────────────────────── */}
         {step === 'success' && order && (
-          <div className="relative space-y-5 animate-fade-in max-w-lg mx-auto w-full">
+          <div className="relative space-y-5 animate-fade-in max-w-lg mx-auto w-full h-full min-h-0 overflow-y-auto pb-4">
             <ParticleBurst />
             <div className="text-center">
               <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1012,6 +1015,7 @@ export default function SellPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

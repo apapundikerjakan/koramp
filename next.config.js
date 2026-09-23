@@ -20,10 +20,10 @@ const cspDirectives = [
   isProd
     ? "script-src 'self' 'unsafe-inline' https://s3.tradingview.com"
     : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://s3.tradingview.com",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "connect-src 'self' https: wss:",
   "img-src 'self' data: blob: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   "frame-src 'self' https://www.tradingview.com https://www.tradingview-widget.com https://s.tradingview.com",
   "object-src 'none'",
   "base-uri 'self'",
@@ -32,6 +32,24 @@ const cspDirectives = [
 
 const nextConfig = {
   reactStrictMode: true,
+
+  // Required: RainbowKit/wagmi/viem ship ESM barrels (`export * from
+  // 'viem/chains' chain). Without transpilation, webpack's static export
+  // analysis fails with "'mainnet' is not exported from 'wagmi/chains'".
+  transpilePackages: [
+    '@rainbow-me/rainbowkit',
+    'wagmi',
+    'viem',
+    '@solana/wallet-adapter-react-ui',
+    '@base-org/account',
+    '@coinbase/cdp-sdk',
+    '@x402/core',
+    '@x402/evm',
+    '@x402/svm',
+    '@x402/fetch',
+    '@x402/express',
+    '@x402/extensions',
+  ],
 
   async headers() {
     const headers = [
@@ -87,6 +105,16 @@ const nextConfig = {
         'react-native$': false,
       };
     }
+
+    // Required: @metamask/sdk (transitive via @wagmi/connectors metaMask —
+    // used by RainbowKit, cannot be uninstalled) statically imports the
+    // React Native storage shim in its browser build. Web never touches that
+    // code path (extension/mobile-SDK flows use their own storage), so alias
+    // it to an empty module instead of installing RN packages for web.
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@react-native-async-storage/async-storage': false,
+    };
 
     // P6/P29: do NOT suppress "Critical dependency" warnings to hide problems.
     // Surface them so underlying dynamic-require issues stay visible.

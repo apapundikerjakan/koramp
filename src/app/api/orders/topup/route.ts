@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       const rej = await banGate(ip);
       if (rej) return NextResponse.json(rej.body, { status: rej.status, headers: { 'Retry-After': String(rej.retryAfter) } });
     }
-    if (!rateLimit('topup-order', ip, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    if (!(await rateLimit('topup-order', ip, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS))) {
       return NextResponse.json(
         { error: { code: 'RATE_LIMITED', message: 'Too many requests. Silakan coba lagi nanti.' } },
         { status: 429 }
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     const result = await createTopUpOrder(body);
     const paymentCreation = 'paymentCreation' in result ? result.paymentCreation : undefined;
     return ok(
-      { order: result.order, payment: result.payment, kipayTrxId: result.kipayTrxId, paymentCreation },
+      { order: result.order, payment: result.payment, providerOrderId: result.providerOrderId, paymentCreation },
       paymentCreation ? 202 : 201,
     );
   } catch (err) { return handleError(err); }

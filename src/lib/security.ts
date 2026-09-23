@@ -1,5 +1,5 @@
 /**
- * KIPRAMP Active Defense engine (defensive only — never retaliates).
+ * KORAMP Active Defense engine (defensive only — never retaliates).
  *
  * Pipeline: DETECT → CONTAIN → RATE LIMIT → QUARANTINE → BLOCK → ALERT ADMIN
  *
@@ -19,6 +19,7 @@
 import crypto from 'crypto';
 import { prisma } from './prisma';
 import { AppError } from './errors';
+import { formatDurationHHMMSS } from './format';
 
 // ─── Request body bounds (defense in depth: middleware checks Content-Length,
 // routes enforce actual bytes — chunked bodies have no Content-Length) ─────────
@@ -74,8 +75,8 @@ export const SEC = {
 } as const;
 
 export const GENERIC_BLOCK_MESSAGE =
-  'Access temporarily restricted. This request has been blocked by KIPRAMP security systems. ' +
-  'If you believe this restriction is a mistake, please contact the administrator using the official contact information provided by KIPRAMP.';
+  'Access temporarily restricted. This request has been blocked by KORAMP security systems. ' +
+  'If you believe this restriction is a mistake, please contact the administrator using the official contact information provided by KORAMP.';
 
 // ─── Progressive duration math (pure — unit-tested) ───────────────────────────
 // BAN #N → N hours, capped at maxAutoHours. Server-computed only.
@@ -89,17 +90,11 @@ export function formatBanDuration(hours: number): string {
   return hours === 1 ? '1 hour' : `${hours} hours`;
 }
 
-export function formatRemaining(totalSeconds: number): string {
-  const s = Math.max(0, Math.floor(totalSeconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const pad = (v: number) => String(v).padStart(2, '0');
-  return `${pad(h)}:${pad(m)}:${pad(sec)}`;
-}
+/** Shared duration formatter retained as a compatibility export. */
+export const formatRemaining = formatDurationHHMMSS;
 
 export function makePublicId(): string {
-  return `KRP-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+  return `KRM-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
 }
 
 // ─── Identity helpers ──────────────────────────────────────────────────────────

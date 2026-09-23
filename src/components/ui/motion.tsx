@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Kiswap motion primitives — prompt UI §4 & §6.
+ * KORAMP motion primitives — prompt UI §4 & §6.
  *
  * Adapted patterns: Beam border (Beam), tilt (beUI), thinking orbs +
  * streaming text (AICSS/Beautiful UI), tool chips + task rows (Beautiful UI),
@@ -406,67 +406,6 @@ export function PulseRings({ color = 'bg-brand-500/40', className }: { color?: s
 
 export function ShimmerText({ children, className }: { children: ReactNode; className?: string }) {
   return <span className={clsx('shimmer-text', className)}>{children}</span>;
-}
-
-// ─── Step indicator ───────────────────────────────────────────────────────────
-
-export function StepIndicator({
-  steps,
-  current,
-  accent = 'bg-brand-600',
-  doneClass = 'bg-green-500',
-}: {
-  steps: { key: string; label: string }[];
-  current: number;
-  accent?: string;
-  doneClass?: string;
-}) {
-  const reduce = useReducedMotion();
-  return (
-    <ol className="flex items-center gap-1.5 mb-8" aria-label="Progres">
-      {steps.map((s, i) => {
-        const done = i < current;
-        const isCurrent = i === current;
-        return (
-          <li key={s.key} className="flex items-center gap-1.5 flex-shrink-0" aria-current={isCurrent ? 'step' : undefined}>
-            <motion.span
-              initial={false}
-              animate={isCurrent && !reduce ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-              transition={{ duration: 0.35 }}
-              title={s.label}
-              className={clsx(
-                'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors',
-                isCurrent ? `${accent} text-white` : done ? `${doneClass} text-white` : 'bg-line-subtle text-gray-500',
-              )}
-            >
-              {done ? (
-                <svg className="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                  <motion.path
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    initial={reduce ? undefined : { pathLength: 0 }}
-                    animate={{ pathLength: 1 }}
-                    transition={{ duration: 0.25 }}
-                  />
-                </svg>
-              ) : (
-                i + 1
-              )}
-            </motion.span>
-            {i < steps.length - 1 && (
-              <span className="relative w-5 sm:w-6 h-px bg-line-subtle overflow-hidden" aria-hidden>
-                <motion.span
-                  className={clsx('absolute inset-y-0 left-0', done ? doneClass : accent)}
-                  initial={false}
-                  animate={{ width: done || isCurrent ? '100%' : '0%' }}
-                  transition={{ duration: 0.3 }}
-                />
-              </span>
-            )}
-          </li>
-        );
-      })}
-    </ol>
-  );
 }
 
 // ─── QR frame ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 /**
- * Kiswap Seed — wallet-first architecture, no user accounts for customers.
+ * KIPRAMP Seed — wallet-first architecture, no user accounts for customers.
  * Populates: Networks, Assets, PlatformWallets, FeeConfig, SystemSettings, AdminUser.
  */
 import { PrismaClient } from '@prisma/client';
@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding Kiswap database (wallet-first)...');
+  console.log('Seeding KIPRAMP database (wallet-first)...');
 
   // ── NETWORKS ────────────────────────────────────────────────────────────────
   const solNet = await prisma.network.upsert({
@@ -47,7 +47,7 @@ async function main() {
   console.log('✓ Assets: SOL, ETH (Base), BNB');
 
   // ── PLATFORM WALLETS ────────────────────────────────────────────────────────
-  // These are Kiswap hot wallets — addresses are set from private keys in env
+  // These are KIPRAMP hot wallets — addresses are set from private keys in env
   // In dev mode, placeholder addresses are used
   const solanaKey = process.env.SOLANA_PLATFORM_PRIVATE_KEY;
   const baseKey = process.env.BASE_PLATFORM_PRIVATE_KEY;
@@ -158,7 +158,7 @@ async function main() {
     console.log('  Generate ulang dari dashboard (/admin → Access Key) atau: npm run admin:setup');
   }
 
-  console.log('\nSeed complete. Kiswap is ready.');
+  console.log('\nSeed complete. KIPRAMP is ready.');
   console.log('Customer flow: Connect Wallet → Top Up or Sell (no account needed)');
   console.log('Admin flow:    POST /api/admin/login with 64-char hex Access Key');
 }

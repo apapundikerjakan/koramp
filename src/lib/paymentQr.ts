@@ -24,14 +24,14 @@ export interface PaymentQrOpts {
  * Sync + light (Decimal only, no ethers in client bundle) + exact (no float).
  */
 export function buildPaymentUri(opts: PaymentQrOpts): string {
-  const { depositAddress, amount, asset, orderNumber, label = 'Kipramp' } = opts;
+  const { depositAddress, amount, asset, orderNumber, label = 'KORAMP' } = opts;
 
   if (asset === 'SOL') {
     // Solana Pay spec: https://docs.solanapay.com/spec
     const params = new URLSearchParams({
       amount,
       label,
-      message: `Sell ${asset} — ${orderNumber}`,
+      message: `Sell ${asset} - ${orderNumber}`,
       memo: orderNumber,
     });
     return `solana:${depositAddress}?${params.toString()}`;

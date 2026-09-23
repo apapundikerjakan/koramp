@@ -21,6 +21,7 @@ npm-debug.log*
 
 # TypeScript
 *.tsbuildinfo
+tsconfig.tsbuildinfo
 
 # Tests
 coverage/
@@ -39,7 +40,11 @@ Thumbs.db
 *.md
 !README.md
 
+# OpenCode agent state — jangan di-commit
+.opencode/progress.md
+
 # Admin scripts (key generation, sensitive tooling)
+/scripts/
 scripts/
 
 # Zip archives

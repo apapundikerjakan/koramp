@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       const rej = await banGate(ip);
       if (rej) return NextResponse.json(rej.body, { status: rej.status, headers: { 'Retry-After': String(rej.retryAfter) } });
     }
-    if (!rateLimit('wallet-signature', ip, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS)) {
+    if (!(await rateLimit('wallet-signature', ip, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS))) {
       return NextResponse.json(
         { error: { code: 'RATE_LIMITED', message: 'Too many requests. Silakan coba lagi nanti.' } },
         { status: 429 }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       // Solana ed25519 verification requires tweetnacl (not a direct dep).
       // Never return verified:true without verification — fail closed.
       return NextResponse.json(
-        { error: { code: 'NOT_IMPLEMENTED', message: 'Verifikasi signature Solana belum tersedia — gunakan EVM atau hubungi admin' } },
+        { error: { code: 'NOT_IMPLEMENTED', message: 'Verifikasi signature Solana belum tersedia. Gunakan EVM atau hubungi admin' } },
         { status: 501 },
       );
     }

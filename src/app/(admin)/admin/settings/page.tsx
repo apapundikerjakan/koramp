@@ -195,7 +195,7 @@ export default function AdminSettingsPage() {
       if (res.ok) {
         setNewKey(data.adminKey);
         setConfirmRotate(false);
-        toast.success(`Key v${data.keyVersion} aktif — key lama langsung mati`);
+        toast.success(`Key v${data.keyVersion} aktif, key lama langsung mati`);
         await loadKeyStatus();
       } else { toast.error(data.error?.message ?? 'Gagal generate key'); setConfirmRotate(false); }
     } catch { toast.error('Network error'); setConfirmRotate(false); }
@@ -206,7 +206,7 @@ export default function AdminSettingsPage() {
     if (!newKey) return;
     navigator.clipboard.writeText(newKey);
     setCopiedKey(true);
-    toast.success('Key disalin — simpan di tempat aman!');
+    toast.success('Key disalin, simpan di tempat aman!');
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
@@ -223,7 +223,7 @@ export default function AdminSettingsPage() {
       {/* Nav */}
       <nav className="bg-base border-b border-line">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
-          <span className="text-white font-bold">KIPRAMP ADMIN</span>
+          <span className="text-white font-bold">KORAMP ADMIN</span>
           <button onClick={handleLogout} className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-colors">
             <LogOut className="w-4 h-4" /> Logout
           </button>
@@ -274,7 +274,7 @@ export default function AdminSettingsPage() {
                   <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-xl space-y-3">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-400" />
-                      <p className="text-green-400 text-sm font-semibold">Key baru aktif — salin sekarang!</p>
+                      <p className="text-green-400 text-sm font-semibold">Key baru aktif, salin sekarang!</p>
                     </div>
                     <div className="flex items-center gap-2 p-3 bg-base rounded-lg border border-green-500/20">
                       <p className="text-white font-mono text-xs flex-1 break-all">{newKey}</p>
@@ -283,7 +283,7 @@ export default function AdminSettingsPage() {
                       </button>
                     </div>
                     <p className="text-yellow-300 text-xs">Key lama sudah mati dan key ini tidak bisa ditampilkan lagi.</p>
-                    <button onClick={() => setNewKey(null)} className="text-gray-500 hover:text-white text-xs">Sudah tersimpan — sembunyikan</button>
+                    <button onClick={() => setNewKey(null)} className="text-gray-500 hover:text-white text-xs">Sudah tersimpan, sembunyikan</button>
                   </div>
                 )}
                 {!newKey && (
@@ -338,7 +338,7 @@ export default function AdminSettingsPage() {
                     </div>
                     {info && <span className={`text-xs font-medium ${srcColor}`}>{info.source} · {info.ageSeconds}s</span>}
                   </div>
-                  <p className="text-white font-black text-xl">{info ? fmt(info.price) : '—'}</p>
+                  <p className="text-white font-black text-xl">{info ? fmt(info.price) : '-'}</p>
                   <p className="text-gray-500 text-xs mt-1">per 1 {asset}</p>
                 </div>
               );
@@ -392,7 +392,7 @@ export default function AdminSettingsPage() {
 
               {/* Summary preview */}
               <div className="bg-base rounded-xl p-4 mb-6">
-                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Preview — berlaku untuk semua aset</p>
+                <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Preview: berlaku untuk semua aset</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
                   {(['SOL', 'ETH', 'BNB'] as const).map(a => (
                     <div key={a} className={`p-3 rounded-lg bg-surface-2 border ${a === 'SOL' ? 'border-purple-500/20' : 'border-line'}`}>

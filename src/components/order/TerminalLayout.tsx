@@ -63,6 +63,10 @@ export function useChartToggle() {
  * Same nesting shape (`<TerminalGrid …>{form}</TerminalGrid>`) so step
  * blocks only swap tags; Ringkasan stacks under the form in the right
  * column instead of a separate aside.
+ *
+ * Full-viewport mode: the grid fills its parent height (page is h-dvh with
+ * overflow hidden — no page scroll). Each column scrolls internally:
+ * chart column and form column get their own overflow-y-auto.
  */
 export function TerminalGrid({
   open,
@@ -78,13 +82,15 @@ export function TerminalGrid({
   return (
     <div
       className={
-        open ? 'grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]' : 'block'
+        open
+          ? 'grid items-start gap-4 sm:gap-6 xl:grid-cols-[minmax(0,1fr)_440px] h-full min-h-0 overflow-y-auto lg:overflow-hidden'
+          : 'block h-full min-h-0 overflow-y-auto'
       }
     >
       {open && (
-        <div className="min-w-0 animate-fade-in lg:sticky lg:top-20">{chart}</div>
+        <div className="min-w-0 animate-fade-in lg:h-full lg:min-h-0 lg:overflow-y-auto">{chart}</div>
       )}
-      <div className={open ? 'min-w-0' : 'mx-auto w-full max-w-xl'}>
+      <div className={open ? 'min-w-0 lg:h-full lg:min-h-0 lg:overflow-y-auto pb-4' : 'mx-auto w-full max-w-3xl'}>
         <div className="space-y-6">
           <div className="min-w-0">{children}</div>
           <div className="min-w-0">{summary}</div>
@@ -117,7 +123,7 @@ export function ChartPanelSkeleton() {
       <div className="px-4 py-3 border-b border-line">
         <ShimmerText>Memuat grafik…</ShimmerText>
       </div>
-      <div className="h-64 lg:h-[calc(100vh-13rem)]" />
+      <div className="h-72 lg:h-[clamp(32.5rem,calc(100vh-15rem),40.625rem)]" />
     </div>
   );
 }

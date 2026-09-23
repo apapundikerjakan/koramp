@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowUpRight, ArrowDownRight, CheckCircle2, Clock,
-  LogOut, RefreshCw, Wallet, AlertTriangle, TrendingUp, Key,
+  LogOut, RefreshCw, Wallet, AlertTriangle, TrendingUp, Key, LifeBuoy, Gift,
 } from 'lucide-react';
 import { RestrictedNotice } from '@/components/admin/AdminGate';
 import { AnalyticsCharts } from '@/components/admin/AnalyticsCharts';
@@ -66,6 +66,7 @@ export default function AdminPage() {
   const [walletLoading, setWalletLoading] = useState(false);
   const [sessionStatus, setSessionStatus] = useState<{ authenticated: boolean; admin?: boolean; restricted?: boolean; remaining?: string; retryAfter?: number; restrictionId?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [supportPending, setSupportPending] = useState<number | null>(null);
 
   const loadWallets = useCallback(async () => {
     setWalletLoading(true);
@@ -85,13 +86,21 @@ export default function AdminPage() {
     } catch {}
   }, []);
 
+  const loadSupportPending = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/support?take=1', { cache: 'no-store' });
+      const data = await res.json();
+      if (res.ok && typeof data.pendingCount === 'number') setSupportPending(data.pendingCount);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetch('/api/admin/session')
       .then(r => r.json())
       .then(data => {
         setSessionStatus(data);
         if (data.authenticated && data.admin) {
-          Promise.all([loadStats(), loadWallets()]).finally(() => setLoading(false));
+          Promise.all([loadStats(), loadWallets(), loadSupportPending()]).finally(() => setLoading(false));
         } else {
           setLoading(false);
         }
@@ -100,7 +109,7 @@ export default function AdminPage() {
         setSessionStatus({ authenticated: false });
         setLoading(false);
       });
-  }, [loadStats, loadWallets]);
+  }, [loadStats, loadWallets, loadSupportPending]);
 
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' });
@@ -135,7 +144,7 @@ export default function AdminPage() {
       {/* Nav */}
       <nav className="bg-base border-b border-line">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-          <span className="text-white font-bold">KIPRAMP ADMIN</span>
+          <span className="text-white font-bold">KORAMP ADMIN</span>
           <button onClick={handleLogout}
             className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-sm transition-colors">
             <LogOut className="w-4 h-4" /> Logout
@@ -148,7 +157,7 @@ export default function AdminPage() {
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-          <p className="text-gray-400 text-sm mt-1">Kipramp Operations</p>
+          <p className="text-gray-400 text-sm mt-1">KORAMP Operations</p>
         </div>
 
         {/* ── Order Stats ──────────────────────────────────────────────────── */}
@@ -284,18 +293,26 @@ export default function AdminPage() {
         {/* ── Quick Nav ─────────────────────────────────────────────────────── */}
         <section>
           <p className="text-gray-500 text-xs uppercase tracking-widest mb-3">Menu</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[
               { href: '/admin/orders/topup', label: 'Top Up Orders', desc: 'Kelola order top up',     icon: ArrowUpRight   },
               { href: '/admin/orders/sell',  label: 'Sell Orders',   desc: 'Kelola order sell',       icon: ArrowDownRight },
+              { href: '/admin/support', label: 'Support', desc: supportPending ? `${supportPending} perlu perhatian` : 'Chat customer', icon: LifeBuoy, badge: supportPending },
+              { href: '/admin/rewards', label: 'Rewards', desc: 'Config & klaim reward', icon: Gift },
               { href: '/admin/settings',     label: 'Settings',      desc: 'Harga & konfigurasi',     icon: TrendingUp     },
               { href: '/admin/security',     label: 'Security',      desc: 'Event & IP bans',         icon: AlertTriangle  },
               { href: '/admin/settings#access-key', label: 'Access Key', desc: 'Lihat & generate key', icon: Key           },
             ].map(item => (
               <Link key={item.href} href={item.href}
-                className="bg-surface-2 border border-line rounded-xl p-5 hover:border-line-strong transition-all group">
+                className="bg-surface-2 border border-line rounded-xl p-5 hover:border-line-strong transition-all group relative">
                 <item.icon className="w-5 h-5 text-gray-500 group-hover:text-brand-400 transition-colors mb-3" />
-                <h3 className="text-white font-semibold text-sm">{item.label}</h3>
+                <h3 className="text-white font-semibold text-sm flex items-center gap-2">{item.label}
+                  {!!(item as { badge?: number | null }).badge && (item as { badge?: number | null }).badge! > 0 && (
+                    <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold inline-flex items-center justify-center">
+                      {(item as { badge?: number | null }).badge! > 99 ? '99+' : (item as { badge?: number | null }).badge}
+                    </span>
+                  )}
+                </h3>
                 <p className="text-gray-500 text-xs mt-1">{item.desc}</p>
               </Link>
             ))}

@@ -44,7 +44,7 @@ model Asset {
   quotes      Quote[]
 }
 
-// ─── PLATFORM WALLETS (Kiswap hot wallets) ───────────────────────────────────
+// ─── PLATFORM WALLETS (KIPRAMP hot wallets) ───────────────────────────────────
 
 model PlatformWallet {
   id        String   @id @default(uuid())
@@ -151,7 +151,7 @@ model SellOrder {
   networkFee            Decimal
   tax                   Decimal  @default(0)
   totalIdrPayout        Decimal
-  depositAddress        String    // Kiswap platform deposit address
+  depositAddress        String    // KIPRAMP platform deposit address
   // Payout — stored per-transaction, no saved bank profile
   payoutBankName        String?
   payoutAccountNumber   String?
@@ -185,9 +185,19 @@ model SellOrder {
 model Payment {
   id                    String    @id @default(uuid())
   topUpOrderId          String    @unique
-  // KiPay fields
+  // Legacy KiPay fields (retired provider — columns kept, unused for new orders)
   kipayTrxId            String?   @unique  // e.g. "SBX-20260825-VG57V5"
   kipayMode             String?   // sandbox | production
+  // Generic provider fields (active: TransFi onramp)
+  provider              String?   // transfi | legacy kipay channel (shopeepay | dana | ...)
+  providerOrderId       String?   @unique  // TransFi OR-... (one KIPRAMP order = one provider order)
+  providerStatus        String?   // last verified TransFi status
+  payUrl                String?   // TransFi hosted checkout fallback
+  providerFee           Decimal?  // TransFi totalFee (metadata only)
+  providerRate          Decimal?  // TransFi exchangeRate (metadata only)
+  providerQuote         String?   // JSON snapshot of provider feeData/quote (audit)
+  providerCreatedAt     DateTime?
+  providerUpdatedAt     DateTime?
   requestedAmount       Decimal
   uniqueCode            Int?
   grossAmount           Decimal
@@ -195,8 +205,7 @@ model Payment {
   netAmount             Decimal?
   currency              String    @default("IDR")
   status                String    @default("PENDING")  // PENDING | PAID | EXPIRED | FAILED
-  provider              String?   // shopeepay | dana | etc
-  qrPayload             String?   // raw QRIS string
+  qrPayload             String?   // raw QRIS string (TransFi paymentsData.qrCode)
   lastVerifiedAt        DateTime? // throttle verifikasi upstream (§13/§28)
   note                  String?
   paidAt                DateTime?
@@ -208,7 +217,22 @@ model Payment {
   webhooks   KipayWebhook[]
 
   @@index([kipayTrxId])
+  @@index([providerOrderId])
   @@index([status])
+}
+
+model TransfiWebhook {
+  id          String    @id @default(uuid())
+  paymentId   String?
+  orderId     String    // TransFi OR-...
+  eventId     String    // TransFi EV-... (idempotency key)
+  status      String    // TransFi order status at event time
+  payload     String    // raw JSON
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([orderId, eventId])
+  @@index([orderId])
 }
 
 model KipayWebhook {
@@ -440,4 +464,136 @@ model AdminAccessKey {
 
   @@index([keyVerifier])
   @@index([isActive])
+}
+
+// ─── SUPPORT TICKETS (user → admin) ─────────────────────────────────────────
+// Minimal ticket system for the wallet-sidebar support flow.
+// Wallet address IS the reporter identity (wallet-first design, no users table).
+// Only public context is stored — never seed phrases / private keys.
+// Conversation lives in SupportMessage (backfilled from legacy `message`).
+
+model SupportTicket {
+  id            String    @id @default(uuid())
+  publicId      String    @unique @default(uuid()) // opaque ticket ref shown to user
+  subject       String
+  message       String
+  walletAddress String
+  walletType    String    // EVM | SOLANA
+  // Optional related KIPRAMP order (public IDs only, never internal DB IDs).
+  orderPublicId String?
+  orderSide     String?   // TOP_UP | SELL
+  orderStatus   String?   // status snapshot at report time
+  txHash        String?
+  status        String    @default("OPEN") // OPEN | IN_PROGRESS | WAITING_CUSTOMER | RESOLVED | CLOSED
+  adminNote     String?
+  lastMessageAt DateTime? // updated on every message for inbox sorting
+  adminUnread   Int       @default(0) // messages from CUSTOMER not yet seen by admin
+  customerUnread Int      @default(0) // messages from ADMIN not yet seen by customer
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  messages      SupportMessage[]
+
+  @@index([walletAddress])
+  @@index([status, createdAt])
+  @@index([orderPublicId])
+  @@index([status, lastMessageAt])
+}
+
+model SupportMessage {
+  id         String   @id @default(uuid())
+  ticketId   String
+  senderType String   // CUSTOMER | ADMIN
+  message    String
+  readAt     DateTime? // set when the *recipient* side opens the conversation
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+}
+
+// ─── WALLET CHALLENGES (proof-of-ownership, single-use) ───────────────────
+// DB-backed (never in-memory): Next.js bundles routes separately, so module
+// state is NOT shared across /challenge and /verify in production. Single-use
+// enforced atomically (updateMany WHERE usedAt IS NULL), like Quote consumption.
+
+model WalletChallenge {
+  id            String    @id @default(uuid())
+  walletAddress String
+  ecosystem     String    // EVM | SOLANA
+  purpose       String    // REWARD_CLAIM | SUPPORT
+  nonce         String
+  message       String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([expiresAt])
+}
+
+// ─── REWARDS (transaction-based promotional program) ──────────────────────
+// Phase 2: eligibility/progress/claim-reservation only. NO payout —
+// no treasury access, no signing, no transfers. Claims stay PENDING_PAYOUT.
+
+model RewardConfig {
+  id                  String    @id @default("default") // singleton row
+  enabled             Boolean   @default(true)
+  minTransactionIdr   Int       @default(100000)
+  requiredCount       Int       @default(50)
+  rewardMinUsd        Decimal   @default(1)
+  rewardMaxUsd        Decimal   @default(2)
+  cycle               String    @default("monthly")
+  activeFrom          DateTime?
+  networks            String    @default("SOLANA,BNB,BASE") // CSV allowlist
+  termsVersion        String    @default("2026-09-v1")
+  updatedAt           DateTime  @updatedAt
+}
+
+model RewardCycle {
+  id             String   @id // "2026-09" (UTC month)
+  startsAt       DateTime
+  endsAt         DateTime
+  status         String   @default("ACTIVE")
+  configSnapshot String   // JSON snapshot of RewardConfig at cycle creation
+  createdAt      DateTime @default(now())
+
+  claims RewardClaim[]
+}
+
+model RewardClaim {
+  id              String   @id @default(uuid())
+  publicId        String   @unique @default(uuid())
+  walletAddress   String
+  cycleId         String
+  qualifyingCount Int
+  configSnapshot  String   // JSON snapshot (min, count, usd range, cycle, terms)
+  rewardUsd       Decimal  // server-generated reservation, NOT a payout
+  network         String
+  destWallet      String
+  policyVersion   String
+  status          String   @default("PENDING_PAYOUT") // PENDING_PAYOUT | PROCESSING | SUBMITTED | CONFIRMING | PAID | DRY_RUN | UNDER_REVIEW | REJECTED | FAILED
+  reviewReason    String?
+  dryRunResult    String?  // JSON dry-run summary (no tx hash — nothing broadcast)
+  // Live payout quote (fixed at PROCESSING, never recalculated on retry).
+  token           String?  // canonical asset paid, e.g. SOL | BNB | ETH
+  tokenAmount     String?
+  baseUnits       String?
+  rateUsd         String?
+  rateSource      String?
+  rateTimestamp   DateTime?
+  txHash          String?  // real chain signature/hash only, never fake
+  failureReason   String?
+  attemptCount    Int      @default(0)
+  submittedAt     DateTime?
+  confirmedAt     DateTime?
+  termsAcceptedAt DateTime
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cycle RewardCycle @relation(fields: [cycleId], references: [id])
+
+  @@unique([walletAddress, cycleId]) // one claim per wallet per cycle
+  @@index([cycleId, status])
 }

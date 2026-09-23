@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { WalletButton } from '@/components/wallet/WalletButton';
+import { WalletSidebarButton } from '@/components/wallet/WalletSidebar';
 import { Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import clsx from 'clsx';
 
 const NAV_LINKS = [
-  { href: '/topup', label: 'Top Up' },
-  { href: '/sell', label: 'Sell' },
+  { href: '/topup-sell', label: 'Top Up/Sell' },
+  { href: '/transactions', label: 'Transactions' },
   { href: '/#how-it-works', label: 'Cara Kerja' },
 ];
 
@@ -31,35 +32,33 @@ export function Navbar() {
       className={clsx(
         'sticky top-0 z-40 border-b transition-all duration-200',
         scrolled
-          ? 'border-line-subtle bg-base/80 backdrop-blur-xl'
-          : 'border-transparent bg-transparent',
+          ? 'border-[#1A1A1A] bg-[#08080A]/85 backdrop-blur-xl'
+          : 'border-[#1A1A1A] bg-[#08080A]',
       )}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0" aria-label="Kipramp beranda">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#C7A048] to-[#1F5C43] rounded-lg flex items-center justify-center shadow-lg shadow-brand-500/20 transition-transform duration-150 group-hover:scale-105">
-              <span className="text-white font-black text-sm">K</span>
-            </div>
-            <span className="text-white font-bold text-xl tracking-tight">
-              Kipramp
-              <span className="hidden sm:inline text-gray-600 text-xs font-medium ml-2">on/off-ramp IDR</span>
-            </span>
+      {/* FULL-WIDTH bar: tanpa max-width — logo/men/wallet diposisikan
+          terhadap viewport, bukan terhadap content container. */}
+      <div className="w-full px-6">
+        <div className="relative flex items-center justify-between h-16 gap-2">
+          {/* KIRI: logo — 24px dari kiri viewport */}
+          <Link href="/" className="flex items-center gap-0 group flex-shrink-0" aria-label="KORAMP beranda">
+            <Image src="/logo.png" alt="Logo KORAMP" width={30} height={30} className="flex-shrink-0" priority />
+            <span className="text-white font-semibold text-base tracking-tight leading-none -ml-1">orAmp</span>
           </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1">
+          {/* TENGAH: nav — center viewport absolut, independen dari
+              lebar logo/wallet */}
+          <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             {NAV_LINKS.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
                 data-active={pathname === link.href}
                 className={clsx(
-                  'nav-link px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150',
+                  'nav-link px-4 py-2 rounded-lg text-sm font-medium transition-all duration-150 whitespace-nowrap',
                   pathname === link.href
-                    ? 'bg-brand-600/20 text-brand-400'
-                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-[#D4B78F]/10 text-[#D4B78F]'
+                    : 'text-[#8B8B93] hover:text-white hover:bg-white/5'
                 )}
               >
                 {link.label}
@@ -67,41 +66,36 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Right: wallet button */}
-          <div className="hidden md:flex items-center">
-            <WalletButton />
+          {/* KANAN: wallet — 24px dari kanan viewport */}
+          <div className="flex items-center justify-end gap-2 min-w-0">
+            <WalletSidebarButton />
+            <button
+              className="md:hidden text-gray-400 hover:text-white p-2 min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
-
-          {/* Mobile toggle */}
-          <button
-            className="md:hidden text-gray-400 hover:text-white p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Tutup menu' : 'Buka menu'}
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
         </div>
 
-        {/* Mobile menu */}
+        {/* Mobile menu — link navigasi saja, wallet sudah ada di bar */}
         {mobileOpen && (
-          <div className="md:hidden border-t border-line-subtle py-3 space-y-1 pb-4 animate-fade-in">
+          <div className="md:hidden border-t border-[#232326] py-3 space-y-1 pb-4 animate-fade-in">
             {NAV_LINKS.map(link => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={clsx(
                   'block px-4 py-2.5 rounded-lg text-sm font-medium',
-                  pathname === link.href ? 'bg-brand-600/20 text-brand-400' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  pathname === link.href ? 'bg-[#D4B78F]/10 text-[#D4B78F]' : 'text-gray-400 hover:text-white hover:bg-white/5'
                 )}
                 onClick={() => setMobileOpen(false)}
               >
                 {link.label}
               </Link>
             ))}
-            <div className="pt-2 px-2">
-              <WalletButton />
-            </div>
           </div>
         )}
       </div>

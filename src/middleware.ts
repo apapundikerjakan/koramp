@@ -22,7 +22,7 @@ function maxBodyBytes(): number {
 // Public pages counted by the visit beacon (mirrors /api/visits allowlist).
 function visitPath(path: string): string | null {
   const p = path.length > 1 ? path.replace(/\/+$/, '') : path;
-  if (p === '/' || p === '/topup' || p === '/sell') return p;
+  if (p === '/' || p === '/topup-sell') return p;
   if (p.startsWith('/order/') && /^\/order\/[A-Za-z0-9_-]{1,100}$/.test(p)) return p;
   return null;
 }
@@ -164,5 +164,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/', '/topup', '/sell', '/order/:path*'],
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/', '/topup-sell', '/topup', '/sell', '/order/:path*'],
 };

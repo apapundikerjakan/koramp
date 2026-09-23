@@ -1,5 +1,5 @@
 /**
- * Kipramp — Centralized asset + network configuration.
+ * KORAMP — Centralized asset + network configuration.
  * Single source of truth for frontend and backend validation.
  * Never define asset/network mappings in individual pages.
  */
@@ -21,6 +21,9 @@ export interface AssetConfig {
   bg: string;
   decimals: number;
   explorerBaseUrl: string;
+  /** Ramp (Top Up & Sell) hanya dibuka untuk network di RAMP_NETWORK_IDS. */
+  supportsTopUp: boolean;
+  supportsSell: boolean;
 }
 
 export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
@@ -36,6 +39,8 @@ export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
     bg: 'bg-purple-500/10',
     decimals: 9,
     explorerBaseUrl: 'https://solscan.io/tx/?cluster=devnet&tx=',
+    supportsTopUp: true,
+    supportsSell: true,
   },
   ETH: {
     symbol: 'ETH',
@@ -49,6 +54,8 @@ export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
     bg: 'bg-blue-500/10',
     decimals: 18,
     explorerBaseUrl: 'https://sepolia.basescan.org/tx/',
+    supportsTopUp: true,
+    supportsSell: true,
   },
   BNB: {
     symbol: 'BNB',
@@ -62,6 +69,8 @@ export const SUPPORTED_ASSETS: Record<AssetSymbol, AssetConfig> = {
     bg: 'bg-yellow-500/10',
     decimals: 18,
     explorerBaseUrl: 'https://testnet.bscscan.com/tx/',
+    supportsTopUp: true,
+    supportsSell: true,
   },
 };
 
@@ -133,6 +142,21 @@ export const CHAIN_NAMES: Record<number, string> = {
   1: 'Ethereum Mainnet',
   11155111: 'Sepolia',
 };
+
+// ─── Ramp registry (satu sumber kebenaran) ───────────────────────────────────
+// Ramp = Top Up + Sell. Hanya tersedia di Solana, Base, BNB Chain. Network
+// lain tidak didaftarkan di wagmi config sehingga tak bisa masuk flow Ramp;
+// helper ini dipakai UI untuk badge/gating yang eksplisit.
+
+export const RAMP_NETWORK_IDS: readonly NetworkId[] = ['SOLANA', 'BASE', 'BSC'] as const;
+
+export function isRampSupported(networkId: NetworkId | null | undefined): boolean {
+  return networkId != null && (RAMP_NETWORK_IDS as readonly string[]).includes(networkId);
+}
+
+export function getRampAssets(): AssetSymbol[] {
+  return ASSET_LIST.filter((a) => a.supportsTopUp || a.supportsSell).map((a) => a.symbol);
+}
 
 export function getAssetByNetwork(networkId: NetworkId): AssetConfig | undefined {
   return ASSET_LIST.find(a => a.networkId === networkId);
