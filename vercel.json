@@ -16,7 +16,6 @@
   "env": {
     "DATABASE_URL": "@kipramp_database_url",
     "JWT_SECRET": "@kipramp_jwt_secret",
-    "PAYMENT_PROVIDER": "mock",
     "BLOCKCHAIN_PROVIDER": "real",
     "SOLANA_RPC_URL": "@kipramp_solana_rpc",
     "BASE_RPC_URL": "@kipramp_base_rpc",
@@ -26,11 +25,11 @@
     "BSC_PLATFORM_PRIVATE_KEY": "@kipramp_bsc_key",
     "ADMIN_EMAIL": "@kipramp_admin_email",
     "ADMIN_PASSWORD": "@kipramp_admin_password",
-    "MOCK_WEBHOOK_SECRET": "@kipramp_webhook_secret",
     "QUOTE_TTL_SECONDS": "120",
 
-    "KIPAY_API_BASE_URL": "@kipramp_kipay_api_base_url",
-    "KIPAY_API_KEY": "@kipramp_kipay_api_key",
-    "KIPAY_MODE": "@kipramp_kipay_mode"
+    "XENDIT_API_BASE_URL": "@kipramp_xendit_api_base_url",
+    "XENDIT_API_KEY": "@kipramp_xendit_api_key",
+    "XENDIT_MODE": "@kipramp_xendit_mode",
+    "XENDIT_WEBHOOK_TOKEN": "@kipramp_xendit_webhook_token"
   }
 }

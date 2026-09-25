@@ -12,14 +12,13 @@ export const dynamic = 'force-dynamic';
 /**
  * GET|POST /api/orders/[publicId]/payment-status
  *
- * Public-but-opaque-auth fallback for TransFi polling when webhook is delayed.
+ * Public-but-opaque-auth fallback for Xendit polling when webhook is delayed.
  * - authenticate by opaque publicId (order ownership is irrelevant; token is secret)
  * - locate local payment
- * - server-side GET TransFi order (throttled)
- * - verify fiat amount + destination wallet + ticker
+ * - server-side GET Xendit payment request (throttled)
+ * - verify reference_id + amount + currency + channel
  * - update local payment/order idempotently
- * - asset_settled completes the order directly (TransFi settles to user wallet;
- *   KORAMP never forwards crypto for TransFi orders)
+ * - SUCCEEDED → PAYMENT_CONFIRMED → KORAMP crypto delivery resumes
  *
  * Never exposes API key. Rate limited. Bounded upstream calls.
  */
@@ -39,7 +38,7 @@ async function handlePaymentStatus(req: NextRequest, { params }: { params: { pub
     }
 
     // Per-order bucket (not global per-IP) — prevents rotating publicId to
-    // amplify upstream KiPay GET calls.
+    // amplify upstream Xendit GET calls.
     const g = await guardPublic(req, `payment-status:${publicId}`, 10, 60_000);
     if (g.response) {
       const status = g.response.status;
@@ -57,14 +56,14 @@ async function handlePaymentStatus(req: NextRequest, { params }: { params: { pub
     }
 
     // Only meaningful for orders still awaiting payment confirmation.
-    if (!['CREATED', 'PAYMENT_PENDING', 'PAYMENT_CREATE_UNKNOWN'].includes(order.status)) {
+    if (!['CREATED', 'PAYMENT_PENDING', 'PAYMENT_CREATE_UNKNOWN', 'PAYMENT_CONFIRMED', 'CRYPTO_PROCESSING'].includes(order.status)) {
       return ok({
         status: order.status,
         payment: order.payment ? paymentView(order.payment, order.status) : null,
       });
     }
 
-    // throttleMs=15s — cocok dengan default lib (15000): upstream KiPay
+    // throttleMs=15s — cocok dengan default lib (15000): upstream Xendit
     // maksimal ~4x/menit per order. Polling client lebih cepat dari ini
     // dilayani dari DB (fast path) tanpa menyentuh upstream.
     const result = await verifyAndFulfillTopUp(publicId, { throttleMs: 15000 });

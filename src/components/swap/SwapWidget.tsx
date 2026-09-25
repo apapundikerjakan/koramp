@@ -338,29 +338,13 @@ export function SwapWidget() {
     }
   };
 
-  const simulatePay = async (status: 'fund_deposited' | 'asset_settled' = 'fund_deposited') => {
-    if (!order?.publicId) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/payments/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderPublicId: order.publicId, status }),
-      });
-      const data = await res.json();
-      if (!res.ok) toast.error(data.error?.message ?? 'Simulasi gagal');
-      else toast.success('Pembayaran disimulasikan!');
-    } catch {
-      toast.error('Simulasi gagal');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // (Sandbox simulation removed — Xendit test payments are driven from the
+  // Xendit Dashboard in test mode, never from the browser.)
 
   // ─── BUY: payment-status poll → success ───────────────────────────────────
-  // TransFi settles crypto directly to the user wallet; KORAMP never
-  // forwards crypto for TransFi orders. Single interval, cleaned up on
-  // stage/publicId change. Silent retry on failure.
+  // Xendit collects IDR; KORAMP delivers crypto via processCryptoDelivery.
+  // payment-status converges PAYMENT_CONFIRMED, then check-delivery confirms
+  // on-chain COMPLETED (ParticleBurst only after crypto confirmed).
   useEffect(() => {
     if (stage !== 'processing' || !isBuy || !order?.publicId) return;
     const publicId = order.publicId as string;
@@ -795,12 +779,12 @@ export function SwapWidget() {
                   <div className="flex justify-center">
                     <ToolChip state="running">Menunggu pembayaran...</ToolChip>
                   </div>
-                  <QrFrame waiting={!qrError} confirmed={false} caption="Powered by TransFi · QRIS">
+                  <QrFrame waiting={!qrError} confirmed={false} caption="QRIS payment">
                     {!qrError && payment.qrPayload ? (
                       <QrCodeCanvas payload={payment.qrPayload} />
                     ) : !qrError && payment.payUrl ? (
                       <div className="w-60 min-h-60 flex flex-col items-center justify-center gap-3 text-gray-300 p-6 text-center">
-                        <p className="text-sm">Selesaikan pembayaran di halaman TransFi</p>
+                        <p className="text-sm">Selesaikan pembayaran di halaman berikut</p>
                         <a href={payment.payUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-400 underline">
                           Buka halaman pembayaran →
                         </a>
@@ -841,22 +825,7 @@ export function SwapWidget() {
                     <p className="text-blue-300 text-xs">Bayar <strong>tepat</strong> sesuai nominal di atas. Status diperbarui otomatis setelah konfirmasi. Jangan tutup halaman ini.</p>
                   </div>
                   {process.env.NODE_ENV !== 'production' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        className="py-2 px-4 rounded-xl border border-yellow-600/30 bg-yellow-600/10 text-yellow-400 text-xs font-semibold disabled:opacity-50"
-                        disabled={submitting}
-                        onClick={() => { void simulatePay('fund_deposited'); }}
-                      >
-                        {submitting ? 'Memproses...' : '🧪 [Sandbox] Simulasi Bayar'}
-                      </button>
-                      <button
-                        className="py-2 px-4 rounded-xl border border-yellow-600/30 bg-yellow-600/10 text-yellow-400 text-xs font-semibold disabled:opacity-50"
-                        disabled={submitting}
-                        onClick={() => { void simulatePay('asset_settled'); }}
-                      >
-                        {submitting ? 'Memproses...' : '🧪 [Sandbox] Simulasi Settlement'}
-                      </button>
-                    </div>
+                    <p className="text-center text-[11px] text-gray-600">Sandbox: selesaikan pembayaran via Xendit Dashboard (test mode).</p>
                   )}
                 </>
               ) : !isBuy ? (

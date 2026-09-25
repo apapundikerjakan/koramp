@@ -36,7 +36,7 @@ const SECTIONS: Array<{ title: string; body: string[] }> = [
   {
     title: '5. Data pembayaran',
     body: [
-      'Pembayaran QRIS diproses melalui penyedia pembayaran TransFi. KORAMP mencatat ID order provider, nominal, penyedia, dan status pembayaran dari verifikasi server-ke-server — bukan dari klaim aplikasi pengguna.',
+      'Pembayaran QRIS diproses melalui infrastruktur pembayaran pihak ketiga. KORAMP mencatat ID order provider, nominal, penyedia, dan status pembayaran dari verifikasi server-ke-server — bukan dari klaim aplikasi pengguna.',
       'KORAMP tidak menyimpan kredensial kartu, PIN, atau kredensial bank Anda. Detail sensitif pembayaran ditangani oleh penyedia pembayaran sesuai kebijakannya masing-masing.',
     ],
   },
@@ -55,7 +55,7 @@ const SECTIONS: Array<{ title: string; body: string[] }> = [
   {
     title: '8. Pihak ketiga dan layanan eksternal',
     body: [
-      'Pengoperasian aplikasi melibatkan layanan pihak ketiga: jaringan blockchain (Solana, Base, BNB Chain) dan penyedia RPC-nya, payment gateway QRIS (TransFi), sumber harga pasar, embed grafik TradingView, penjelajah blockchain (tautan pelacakan transaksi), serta penyedia infrastruktur/hosting.',
+      'Pengoperasian aplikasi melibatkan layanan pihak ketiga: jaringan blockchain (Solana, Base, BNB Chain) dan penyedia RPC-nya, infrastruktur pembayaran IDR dan payout bank pihak ketiga, sumber harga pasar, embed grafik TradingView, penjelajah blockchain (tautan pelacakan transaksi), serta penyedia infrastruktur/hosting.',
       'Masing-masing tunduk pada kebijakan privasinya sendiri. KORAMP tidak menjual data pengguna dan tidak membagikan data untuk periklanan.',
     ],
   },

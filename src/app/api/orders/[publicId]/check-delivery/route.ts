@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { shouldSkipKipremDelivery } from '@/lib/transfi';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
 import { ok, handleError } from '@/lib/response';
 import { NotFoundError } from '@/lib/errors';
@@ -39,11 +38,7 @@ export async function POST(
 
     if (!order) throw new NotFoundError('Order tidak ditemukan');
 
-    // TransFi orders settle directly to the user wallet — KORAMP delivery
-    // must never trigger for them. Report status only.
-    if (shouldSkipKipremDelivery(order.payment?.provider)) {
-      return ok({ status: order.status });
-    }
+    // Xendit BUY orders ARE delivered by KORAMP — resume delivery below.
 
     // Only act on orders that are still processing crypto.
     if (order.status === 'COMPLETED') {

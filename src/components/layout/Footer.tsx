@@ -20,7 +20,7 @@ export function Footer() {
             <p className="text-[#5A5A60] text-xs mt-3">SOL · ETH (Base) · BNB</p>
             <span className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-full text-xs font-semibold text-[#D4B78F] border border-[#D4B78F]/40 bg-transparent">
               <QrCode className="w-3 h-3" aria-hidden />
-              Powered by TransFi QRIS
+              QRIS payment
             </span>
           </div>
           <div>

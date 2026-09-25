@@ -371,7 +371,7 @@ export default function OrderStatusPage() {
         {/* TOPUP: Payment info */}
         {isTopUp && order.payment && (
           <div className="bg-surface-1 border border-line-subtle rounded-2xl p-5 mb-5">
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Pembayaran TransFi</p>
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-3">Pembayaran</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Status</span>

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { transfiGetBalance } from '@/lib/transfi';
+import { xenditHealthCheck } from '@/lib/xendit';
 import { ok, handleError } from '@/lib/response';
 import { requireAdmin } from '@/lib/adminAuth';
 import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
@@ -7,18 +7,18 @@ import { rateLimit, getClientIp, RATE_LIMITS } from '@/lib/rateLimit';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/admin/health/transfi
+ * GET /api/admin/health/xendit
  *
- * Admin-only diagnostic for TransFi connectivity + config sanity.
- * - Does not expose TRANSFI_USERNAME/PASSWORD.
- * - Uses server-side base URL allowlist.
+ * Admin-only diagnostic for Xendit connectivity + config sanity.
+ * - Does not expose XENDIT_API_KEY / XENDIT_WEBHOOK_TOKEN.
+ * - No money movement.
  */
 export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req);
 
     const ip = getClientIp(req);
-    if (!(await rateLimit('admin-health-transfi', ip, RATE_LIMITS.admin.max, RATE_LIMITS.admin.windowMs))) {
+    if (!(await rateLimit('admin-health-xendit', ip, RATE_LIMITS.admin.max, RATE_LIMITS.admin.windowMs))) {
       return ok({ ok: false, error: 'rate_limited' }, 429);
     }
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     let httpStatus: number | null = null;
     let errorCategory: string | null = null;
     try {
-      const r = await transfiGetBalance();
+      const r = await xenditHealthCheck();
       reachable = r.ok;
       httpStatus = r.httpStatus;
       if (!r.ok) errorCategory = 'UNREACHABLE';
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       errorCategory = 'UNTANGIBLE';
     }
 
-    return ok({ ok: reachable ? 'healthy' : 'unhealthy', checks: { reachable, httpStatus, errorCategory } });
+    return ok({ ok: reachable ? 'healthy' : 'unhealthy', checks: { reachable, httpStatus, errorCategory, provider: 'xendit' } });
   } catch (err) {
     return handleError(err);
   }

@@ -8,7 +8,7 @@ Wallet-only crypto on/off-ramp. No account registration required.
 
 - Next.js 14 · TypeScript · Prisma · SQLite/PostgreSQL
 - Wagmi + RainbowKit (EVM) · Solana Wallet Adapter
-- KiPay (QRIS payment gateway)
+- Xendit (QRIS payment collection + IDR bank payouts; Payments API v3 + Payout API v3)
 
 ## Setup
 
@@ -26,7 +26,7 @@ npm run dev
 
 Copy `.env.example` → `.env` and fill in:
 - `DATABASE_URL`
-- `KIPAY_API_KEY`, `KIPAY_API_BASE_URL`, `KIPAY_MODE`
+- `XENDIT_API_KEY`, `XENDIT_MODE`, `XENDIT_WEBHOOK_TOKEN`
 - `JWT_SECRET`, `ADMIN_ACCESS_KEY`
 - Blockchain RPC URLs and platform wallet private keys
 

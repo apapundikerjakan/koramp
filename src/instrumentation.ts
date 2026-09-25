@@ -47,8 +47,7 @@ export async function register() {
     if (process.env.NODE_ENV === 'production') {
       const missing: string[] = [];
       if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'dev-secret-change-in-production') missing.push('JWT_SECRET');
-      if (!process.env.TRANSFI_USERNAME || !process.env.TRANSFI_PASSWORD) missing.push('TRANSFI_USERNAME/PASSWORD');
-      if (!process.env.TRANSFI_MID) missing.push('TRANSFI_MID');
+      if (!process.env.XENDIT_API_KEY) missing.push('XENDIT_API_KEY');
       if (process.env.BLOCKCHAIN_PROVIDER !== 'real') missing.push('BLOCKCHAIN_PROVIDER=real');
       if (missing.length) {
         console.error(`[instrumentation] FATAL: missing production env: ${missing.join(', ')}`);
@@ -57,8 +56,8 @@ export async function register() {
       if (!process.env.CRON_SECRET) {
         console.error('[instrumentation] WARNING: CRON_SECRET not set — cron endpoints return 401 until configured');
       }
-      if (!process.env.TRANSFI_WEBHOOK_SECRET) {
-        console.error('[instrumentation] WARNING: TRANSFI_WEBHOOK_SECRET not set — webhooks accepted without signature (spam risk)');
+      if (!process.env.XENDIT_WEBHOOK_TOKEN) {
+        console.error('[instrumentation] WARNING: XENDIT_WEBHOOK_TOKEN not set — webhooks rejected until configured');
       }
       if (!process.env.ADMIN_TOTP_SECRET) {
         console.error('[instrumentation] WARNING: ADMIN_TOTP_SECRET not set — admin 2FA disabled');

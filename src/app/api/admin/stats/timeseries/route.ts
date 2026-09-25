@@ -17,7 +17,7 @@ export const dynamic = 'force-dynamic';
  * - Pendapatan: sum serviceFee of COMPLETED orders (both sides).
  *   tax is EXCLUDED (forwarded to state, not platform revenue).
  * - Pengeluaran: sum networkFee (both sides) + Payment.feeAmount
- *   (KiPay gateway fee). Per-order SOL ATA usage isn't stored, so it can't
+ *   (provider gateway fee). Per-order SOL ATA usage isn't stored, so it can't
  *   be attributed — excluded (see note below).
  * - Kunjungan: sum PageVisit.count. No PageVisit rows yet → zeros.
  *
@@ -135,7 +135,7 @@ export async function GET(req: NextRequest) {
       })),
       notes: {
         revenue: 'serviceFee COMPLETED (tax excluded)',
-        expenses: 'networkFee + KiPay feeAmount (per-order ATA usage not stored — excluded)',
+        expenses: 'networkFee + provider feeAmount (per-order ATA usage not stored — excluded)',
       },
     });
   } catch (err) {
