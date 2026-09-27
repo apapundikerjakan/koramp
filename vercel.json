@@ -3,16 +3,6 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["sin1"],
-  "crons": [
-    {
-      "path": "/api/cron/scan-deposits",
-      "schedule": "*/1 * * * *"
-    },
-    {
-      "path": "/api/cron/reconcile",
-      "schedule": "*/2 * * * *"
-    }
-  ],
   "env": {
     "DATABASE_URL": "@kipramp_database_url",
     "JWT_SECRET": "@kipramp_jwt_secret",
