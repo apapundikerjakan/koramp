@@ -78,7 +78,7 @@ async function fetchSingleFlight(): Promise<Partial<Record<AssetSymbol, Decimal>
 
 async function getManualPrice(
   asset: AssetSymbol,
-  prisma?: { systemSetting: { findUnique(args: { where: { key: string } }): Promise<{ value: string } | null> } },
+  prisma?: any,
 ): Promise<Decimal | null> {
   if (!prisma) return null;
   try {
@@ -241,7 +241,7 @@ export async function getSpotPrice(asset: AssetSymbol): Promise<Decimal | null> 
  */
 export async function getLivePrice(
   asset: AssetSymbol,
-  prisma?: { systemSetting: { findUnique(args: { where: { key: string } }): Promise<{ value: string } | null> } },
+  prisma?: any,
 ): Promise<Decimal> {
   const now = Date.now();
   const cached = priceCache.get(asset);
