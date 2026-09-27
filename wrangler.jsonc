@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "koramp",
+  "main": ".open-next/worker.js",
+  // Set to today's date on first creation; review runtime changes before advancing.
+  "compatibility_date": "2026-09-27",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  // Replaces vercel.json crons. NOTE: verify post-deploy that scheduled events
+  // reach src/app/api/cron/* (see README "Cloudflare deploy" section). Until
+  // verified, keep an external HTTP cron hitting the public /api/cron/* URLs.
+  "triggers": {
+    "crons": ["*/1 * * * *", "*/2 * * * *"]
+  }
+}

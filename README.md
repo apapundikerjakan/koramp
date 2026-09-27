@@ -18,7 +18,7 @@ cp .env.example .env
 
 npm install
 npx prisma db push
-node scripts/setup-admin.js   # generate admin key (run locally, never commit output)
+node scripts/setup-admin.cjs   # generate admin key (run locally, never commit output)
 npm run dev
 ```
 

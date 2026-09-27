@@ -49,3 +49,6 @@ scripts/
 
 # Zip archives
 *.zip
+.open-next/
+.wrangler/
+.dev.vars
