@@ -50,8 +50,11 @@ export async function register() {
       if (!process.env.XENDIT_API_KEY) missing.push('XENDIT_API_KEY');
       if (process.env.BLOCKCHAIN_PROVIDER !== 'real') missing.push('BLOCKCHAIN_PROVIDER=real');
       if (missing.length) {
+        // Workers-safe: never process.exit() here — workerd has no process
+        // lifecycle and exiting/throwing bricks every request (1101).
+        // Missing secrets are enforced per-request (e.g. guardCron → 401).
         console.error(`[instrumentation] FATAL: missing production env: ${missing.join(', ')}`);
-        process.exit(1);
+        return;
       }
       if (!process.env.CRON_SECRET) {
         console.error('[instrumentation] WARNING: CRON_SECRET not set — cron endpoints return 401 until configured');
@@ -74,9 +77,8 @@ export async function register() {
         '[instrumentation] FATAL: network configuration invalid —',
         err instanceof Error ? err.message : err,
       );
-      // Fail fast: a deployment where backend and frontend could end up on
-      // different clusters must not serve traffic.
-      process.exit(1);
+      // Workers-safe: log and continue — throwing/exiting here bricks every
+      // request (1101). A mismatched RPC endpoint surfaces per-request instead.
     }
   }
 }
