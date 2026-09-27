@@ -1,0 +1,20 @@
+# Local secrets for `wrangler dev` / `opennextjs-cloudflare preview`.
+# Copy: copy .dev.vars.example .dev.vars  (NEVER commit .dev.vars — gitignored)
+# Production: set the same keys via `wrangler secret put <NAME>` or the
+# Cloudflare dashboard (Workers Builds → Settings → Variables & Secrets).
+#
+# DATABASE_URL must be a Prisma Accelerate URL on Cloudflare Workers:
+#   prisma://accelerate.prisma-data.net/?api_key=...
+# Plain postgres/sqlite URLs only work for local `next dev`, not on Workers.
+
+DATABASE_URL="prisma://accelerate.prisma-data.net/?api_key=PASTE_HERE"
+JWT_SECRET="PASTE_HERE"
+ADMIN_ACCESS_KEY="PASTE_HERE"
+ADMIN_SESSION_EXPIRES_IN="10m"
+XENDIT_API_BASE_URL="https://api.xendit.co"
+XENDIT_API_KEY="PASTE_HERE"
+XENDIT_MODE="sandbox"
+XENDIT_WEBHOOK_TOKEN="PASTE_HERE"
+CRON_SECRET="PASTE_HERE"
+RATE_LIMIT_STORE="memory"
+QUOTE_TTL_SECONDS="60"

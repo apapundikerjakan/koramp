@@ -9,7 +9,7 @@
  * - Base: white lockup SVG from the official Base brand kit (brand.base.org)
  * - BNB Chain: lockup SVG from official BNB Chain docs (docs.bnbchain.org)
  * - Blockchain.com: lockup SVG from Blockchain.com's own GitHub repo
- * - TransFi: text badge (no logo asset)
+ * - Xendit: text badge (no logo asset)
  * - IDR: neutral "Rp" currency badge (not a company logo)
  *
  * Artwork is never altered: only display height is normalized (width auto,
@@ -28,7 +28,7 @@ interface Item {
 }
 
 const ITEMS: Item[] = [
-  { id: 'transfi', label: 'TransFi', href: 'https://transfi.com/', width: 0, height: 0 },
+  { id: 'xendit', label: 'Xendit', href: 'https://www.xendit.co/', width: 0, height: 0 },
   { id: 'blockchain', label: 'Blockchain.com', href: 'https://www.blockchain.com/', src: '/logos/blockchaincom.svg', width: 432, height: 48 },
   { id: 'solana', label: 'Solana', href: 'https://solana.com/', src: '/logos/solana.svg', width: 646, height: 96 },
   { id: 'base', label: 'Base', href: 'https://www.base.org/', src: '/logos/base.svg', width: 1280, height: 324 },
@@ -52,10 +52,10 @@ function LogoItem({ id, label, href, src, width, height }: Item) {
         <img src={src} alt="" aria-hidden width={w} height={h} style={{ height: h, width: 'auto', flexShrink: 0 }} draggable={false} />
       ) : (
         <span aria-hidden className="flex items-center justify-center rounded-full border border-[#D4B78F]/50 bg-[#D4B78F]/10 text-[#D4B78F] text-xs sm:text-sm font-bold" style={{ height: h, width: h, flexShrink: 0 }}>
-          {id === 'transfi' ? 'TF' : 'Rp'}
+          {id === 'xendit' ? 'X' : 'Rp'}
         </span>
       )}
-      {(id === 'idr' || id === 'transfi') && (
+      {(id === 'idr' || id === 'xendit') && (
         <span
           style={{
             color: '#CFCFD4',
@@ -70,7 +70,7 @@ function LogoItem({ id, label, href, src, width, height }: Item) {
             maxWidth: 'none',
           }}
         >
-          {id === 'idr' ? 'Rupiah' : 'TransFi'}
+          {id === 'idr' ? 'Rupiah' : 'Xendit'}
         </span>
       )}
     </>

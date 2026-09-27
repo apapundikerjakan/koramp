@@ -138,7 +138,7 @@ export function AnalyticsCharts() {
             </ul>
           )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ChartCard title="Pendapatan vs pengeluaran" hint="serviceFee COMPLETED vs networkFee + fee KiPay, per hari (IDR)">
+            <ChartCard title="Pendapatan vs pengeluaran" hint="serviceFee COMPLETED vs networkFee + fee provider pembayaran, per hari (IDR)">
               <ResponsiveContainer width="100%" height={240}>
                 <LineChart data={days} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                   <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />

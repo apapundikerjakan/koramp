@@ -115,7 +115,7 @@ export default function TopUpPage() {
   }, [quote?.expiresAt, step, autoRefreshQuote]);
 
   // Auto-poll order status when in payment step.
-  // Uses /payment-status to trigger server-to-server TransFi verification —
+  // Uses /payment-status to trigger server-to-server Xendit verification —
   // not just a DB read. This is essential when webhook cannot reach localhost
   // (development) or when webhook delivery is delayed.
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function TopUpPage() {
 
     const poll = async () => {
       try {
-        // payment-status triggers a server-side GET to TransFi, then updates DB.
+        // payment-status triggers a server-side GET to Xendit, then updates DB.
         const res = await fetch(`/api/orders/${order.publicId}/payment-status`);
         const data = await res.json();
         const status = data.status ?? order.status;
@@ -503,13 +503,13 @@ export default function TopUpPage() {
               <ToolChip state="running">Menunggu pembayaran...</ToolChip>
             </div>
 
-            {/* QRIS Image — rendered from TransFi QR string (client-side) */}
-            <QrFrame waiting={!qrError} confirmed={false} caption="Powered by TransFi · QRIS">
+            {/* QRIS Image — rendered from Xendit QR string (client-side) */}
+            <QrFrame waiting={!qrError} confirmed={false} caption="QRIS payment">
               {!qrError && payment.qrPayload ? (
                 <QrCodeCanvas payload={payment.qrPayload} />
               ) : !qrError && payment.payUrl ? (
                 <div className="w-60 min-h-60 flex flex-col items-center justify-center gap-3 text-gray-300 p-6 text-center">
-                  <p className="text-sm">Selesaikan pembayaran di halaman TransFi</p>
+                  <p className="text-sm">Selesaikan pembayaran di halaman berikut</p>
                   <a href={payment.payUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-400 underline">
                     Buka halaman pembayaran →
                   </a>

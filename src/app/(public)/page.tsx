@@ -18,7 +18,7 @@ const RAILS = [
   {
     n: '01',
     title: 'Kumpulkan',
-    desc: 'Terima pembayaran IDR via QRIS (KiPay) dan settle ke crypto: SOL, ETH, BNB. Quote dikunci di awal, tidak berubah sepihak.',
+    desc: 'Terima pembayaran IDR via QRIS dan settle ke crypto: SOL, ETH, BNB. Quote dikunci di awal, tidak berubah sepihak.',
     icon: QrCode,
   },
   {

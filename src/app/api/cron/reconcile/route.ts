@@ -13,8 +13,7 @@
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getBlockchainProvider, type NetworkId } from '@/lib/blockchain';
-import { processCryptoDelivery, processSellPayout } from '@/lib/orders';
-import { shouldSkipKipremDelivery } from '@/lib/transfi';
+import { processCryptoDelivery, processSellPayout, verifyAndFulfillPayout } from '@/lib/orders';
 import { ok } from '@/lib/response';
 import { guardCron } from '@/lib/apiGuard';
 
@@ -58,8 +57,7 @@ async function runReconcile() {
   }
 
   // 1. TopUp stuck in CRYPTO_PROCESSING — re-check withdrawal confirmation.
-  // TransFi orders NEVER use KORAMP delivery (direct-to-user settlement),
-  // so they are excluded from every delivery-resume path below.
+  // Xendit BUY orders use KORAMP delivery — resume them here.
   const stuckTopups = await prisma.topUpOrder.findMany({
     where: { status: 'CRYPTO_PROCESSING' },
     include: { withdrawal: true, payment: { select: { provider: true } } },
@@ -67,7 +65,6 @@ async function runReconcile() {
   });
   for (const o of stuckTopups) {
     try {
-      if (shouldSkipKipremDelivery(o.payment?.provider)) continue;
       if (o.withdrawal?.txHash) {
         const bc = getBlockchainProvider(o.network as NetworkId);
         const info = await bc.getTransaction(o.withdrawal.txHash).catch(() => null);
@@ -95,7 +92,7 @@ async function runReconcile() {
   }
 
   // 2. PAYMENT_CONFIRMED never started delivery (webhook process died before delivery).
-  // Legacy KiPay path only — TransFi settles directly to the user wallet.
+  // Xendit path — resume KORAMP crypto delivery.
   const neverStarted = await prisma.topUpOrder.findMany({
     where: { status: 'PAYMENT_CONFIRMED' },
     include: { payment: { select: { provider: true } } },
@@ -103,7 +100,6 @@ async function runReconcile() {
   });
   for (const o of neverStarted) {
     try {
-      if (shouldSkipKipremDelivery(o.payment?.provider)) continue;
       await processCryptoDelivery(o.id);
       out.resumedDeliveries++;
     } catch (e) {
@@ -137,13 +133,18 @@ async function runReconcile() {
   // 3. Sell payouts stuck.
   const stuckSells = await prisma.sellOrder.findMany({
     where: { status: { in: ['CRYPTO_CONFIRMED', 'PAYOUT_PROCESSING'] } },
+    include: { payout: true },
     take: 20,
   });
   for (const o of stuckSells) {
     try {
       // processSellPayout is idempotent via payout upsert on sellOrderId.
-      if (o.status === 'CRYPTO_CONFIRMED') {
+      if (o.status === 'CRYPTO_CONFIRMED' && !o.payout?.xenditPayoutId) {
         await processSellPayout(o.id);
+        out.resumedPayouts++;
+      } else if (o.payout?.xenditPayoutId) {
+        // Payout exists — reconcile server-side (webhook may be delayed).
+        await verifyAndFulfillPayout(o.id);
         out.resumedPayouts++;
       }
     } catch (e) {

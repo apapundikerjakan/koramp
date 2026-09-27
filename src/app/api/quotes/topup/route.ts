@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limiting untuk quote request
     const ip = getClientIp(req);
-    // Ban gate: rejected before any expensive work (blockchain RPC, KiPay, DB writes).
+    // Ban gate: rejected before any expensive work (blockchain RPC, Xendit, DB writes).
     {
       const { banGate } = await import('@/lib/security');
       const rej = await banGate(ip);

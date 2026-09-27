@@ -41,6 +41,45 @@ export async function GET(
 
     if (!order) throw new NotFoundError('Order tidak ditemukan');
 
+    // Server-side payout reconciliation (webhook may be delayed).
+    // Terminal sell states are served from DB; active payouts re-verify via Xendit.
+    if (['CRYPTO_CONFIRMED', 'PAYOUT_PROCESSING'].includes(order.status) && order.payout) {
+      try {
+        const { verifyAndFulfillPayout } = await import('@/lib/orders');
+        await verifyAndFulfillPayout(order.id);
+        const refreshed = await prisma.sellOrder.findUnique({
+          where: { publicId: params.publicId },
+          include: {
+            payout: {
+              select: {
+                status: true, bankName: true, accountNumber: true, accountName: true,
+                amount: true, providerRef: true, sentAt: true, completedAt: true, failureReason: true,
+              },
+            },
+          },
+        });
+        if (refreshed) {
+          return ok({
+            status: refreshed.status,
+            completedAt: refreshed.completedAt,
+            payout: refreshed.payout
+              ? {
+                  status: refreshed.payout.status,
+                  bankName: refreshed.payout.bankName,
+                  accountNumber: maskAccount(refreshed.payout.accountNumber),
+                  accountName: refreshed.payout.accountName,
+                  amount: refreshed.payout.amount,
+                  providerRef: refreshed.payout.providerRef,
+                  sentAt: refreshed.payout.sentAt,
+                  completedAt: refreshed.payout.completedAt,
+                  failureReason: refreshed.payout.failureReason,
+                }
+              : null,
+          });
+        }
+      } catch { /* serve local state on upstream failure */ }
+    }
+
     return ok({
       status: order.status,
       completedAt: order.completedAt,

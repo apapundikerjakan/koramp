@@ -180,7 +180,7 @@ model SellOrder {
   @@index([cryptoTxHash])
 }
 
-// ─── PAYMENTS (KiPay) ─────────────────────────────────────────────────────────
+// ─── PAYMENTS (Xendit — active provider) ──────────────────────────────────────
 
 model Payment {
   id                    String    @id @default(uuid())
@@ -188,14 +188,16 @@ model Payment {
   // Legacy KiPay fields (retired provider — columns kept, unused for new orders)
   kipayTrxId            String?   @unique  // e.g. "SBX-20260825-VG57V5"
   kipayMode             String?   // sandbox | production
-  // Generic provider fields (active: TransFi onramp)
-  provider              String?   // transfi | legacy kipay channel (shopeepay | dana | ...)
-  providerOrderId       String?   @unique  // TransFi OR-... (one KIPRAMP order = one provider order)
-  providerStatus        String?   // last verified TransFi status
-  payUrl                String?   // TransFi hosted checkout fallback
-  providerFee           Decimal?  // TransFi totalFee (metadata only)
-  providerRate          Decimal?  // TransFi exchangeRate (metadata only)
-  providerQuote         String?   // JSON snapshot of provider feeData/quote (audit)
+  // Generic provider fields (active: xendit)
+  // LEGACY values "transfi" / kipay channels may appear on historical rows only.
+  provider              String?   // xendit (new orders)
+  providerOrderId       String?   @unique  // Xendit payment_request_id (pr-...)
+  providerStatus        String?   // last verified Xendit payment_request status
+  providerChannel       String?   // e.g. QRIS
+  payUrl                String?   // Xendit redirect action fallback (rare for QRIS)
+  providerFee           Decimal?  // LEGACY provider fee snapshot (unused for new Xendit orders)
+  providerRate          Decimal?  // LEGACY provider rate snapshot (unused for new Xendit orders)
+  providerQuote         String?   // LEGACY JSON snapshot of provider quote (audit, unused for new orders)
   providerCreatedAt     DateTime?
   providerUpdatedAt     DateTime?
   requestedAmount       Decimal
@@ -205,7 +207,7 @@ model Payment {
   netAmount             Decimal?
   currency              String    @default("IDR")
   status                String    @default("PENDING")  // PENDING | PAID | EXPIRED | FAILED
-  qrPayload             String?   // raw QRIS string (TransFi paymentsData.qrCode)
+  qrPayload             String?   // raw QRIS string (Xendit actions QR_STRING)
   lastVerifiedAt        DateTime? // throttle verifikasi upstream (§13/§28)
   note                  String?
   paidAt                DateTime?
@@ -222,6 +224,8 @@ model Payment {
 }
 
 model TransfiWebhook {
+  // LEGACY/DEPRECATED — TransFi retired. Rows kept for history only.
+  // New orders MUST use XenditWebhook. Never write here for new orders.
   id          String    @id @default(uuid())
   paymentId   String?
   orderId     String    // TransFi OR-...
@@ -236,6 +240,7 @@ model TransfiWebhook {
 }
 
 model KipayWebhook {
+  // LEGACY/DEPRECATED — KiPay retired. Rows kept for history only.
   id          String    @id @default(uuid())
   paymentId   String?
   kipayTrxId  String
@@ -307,6 +312,11 @@ model Payout {
   amount        Decimal
   status        String    @default("PENDING")
   providerRef   String?
+  // Xendit payout reconciliation (active provider = xendit)
+  xenditPayoutId    String?   @unique
+  idempotencyKey    String?   @unique
+  xenditStatus      String?
+  failureCode       String?
   failureReason String?
   sentAt        DateTime?
   completedAt   DateTime?
@@ -316,6 +326,26 @@ model Payout {
   sellOrder SellOrder @relation(fields: [sellOrderId], references: [id])
 
   @@index([status])
+}
+
+model XenditWebhook {
+  id               String    @id @default(uuid())
+  paymentId        String?
+  payoutId         String?
+  kind             String    // PAYMENT | PAYOUT
+  event            String    // e.g. payment.capture, v3_payout.succeeded
+  paymentRequestId String?
+  xenditPayoutId   String?
+  referenceId      String?
+  status           String?
+  payload          String    // raw JSON
+  processedAt      DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@unique([kind, event, paymentRequestId, payoutId])
+  @@index([referenceId])
+  @@index([paymentRequestId])
+  @@index([xenditPayoutId])
 }
 
 // ─── LEDGER ───────────────────────────────────────────────────────────────────
