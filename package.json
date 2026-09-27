@@ -68,6 +68,7 @@
     "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "0.6.6",
     "@types/bcryptjs": "2.4.6",
     "@types/jest": "29.5.11",
     "@types/node": "20.10.5",
