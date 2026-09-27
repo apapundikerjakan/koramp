@@ -12,10 +12,8 @@
   "observability": {
     "enabled": true
   },
-  // Replaces vercel.json crons. NOTE: verify post-deploy that scheduled events
-  // reach src/app/api/cron/* (see README "Cloudflare deploy" section). Until
-  // verified, keep an external HTTP cron hitting the public /api/cron/* URLs.
-  "triggers": {
-    "crons": ["*/1 * * * *", "*/2 * * * *"]
-  }
+  // NOTE: no triggers.crons here — the worker has no scheduled() handler and
+  // Cloudflare would throw on every minute. Cron stays external: an HTTP cron
+  // hitting the public /api/cron/* URLs (see README "Cloudflare deploy").
+}
 }
