@@ -11,9 +11,8 @@
   },
   "observability": {
     "enabled": true
-  },
+  }
   // NOTE: no triggers.crons here — the worker has no scheduled() handler and
   // Cloudflare would throw on every minute. Cron stays external: an HTTP cron
   // hitting the public /api/cron/* URLs (see README "Cloudflare deploy").
-}
 }
