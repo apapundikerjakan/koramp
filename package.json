@@ -23,7 +23,7 @@
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
-    "@opennextjs/cloudflare": "0.6.6",
+    "@opennextjs/cloudflare": "1.15.1",
     "@prisma/client": "5.7.1",
     "@prisma/extension-accelerate": "^1.3.0",
     "@rainbow-me/rainbowkit": "^2.2.11",
@@ -68,7 +68,7 @@
     "react-dom": "18.2.0"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "0.6.6",
+    "@opennextjs/cloudflare": "1.15.1",
     "@types/bcryptjs": "2.4.6",
     "@types/jest": "29.5.11",
     "@types/node": "20.10.5",
