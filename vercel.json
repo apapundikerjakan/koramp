@@ -2,24 +2,5 @@
   "buildCommand": "npx prisma generate && next build",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "regions": ["sin1"],
-  "env": {
-    "DATABASE_URL": "@kipramp_database_url",
-    "JWT_SECRET": "@kipramp_jwt_secret",
-    "BLOCKCHAIN_PROVIDER": "real",
-    "SOLANA_RPC_URL": "@kipramp_solana_rpc",
-    "BASE_RPC_URL": "@kipramp_base_rpc",
-    "BSC_RPC_URL": "@kipramp_bsc_rpc",
-    "SOLANA_PLATFORM_PRIVATE_KEY": "@kipramp_solana_key",
-    "BASE_PLATFORM_PRIVATE_KEY": "@kipramp_base_key",
-    "BSC_PLATFORM_PRIVATE_KEY": "@kipramp_bsc_key",
-    "ADMIN_EMAIL": "@kipramp_admin_email",
-    "ADMIN_PASSWORD": "@kipramp_admin_password",
-    "QUOTE_TTL_SECONDS": "120",
-
-    "XENDIT_API_BASE_URL": "@kipramp_xendit_api_base_url",
-    "XENDIT_API_KEY": "@kipramp_xendit_api_key",
-    "XENDIT_MODE": "@kipramp_xendit_mode",
-    "XENDIT_WEBHOOK_TOKEN": "@kipramp_xendit_webhook_token"
-  }
+  "regions": ["sin1"]
 }
